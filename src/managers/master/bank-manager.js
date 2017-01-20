@@ -5,216 +5,79 @@ var ObjectId = require('mongodb').ObjectId;
 
 // internal deps
 require('mongodb-toolkit');
+var BaseManager = require('module-toolkit').BaseManager;
 var BateeqModels = require('bateeq-models');
-var map = BateeqModels.map;
-
 var Bank = BateeqModels.master.Bank;
+var map = BateeqModels.map;
 //var generateCode = require('../../utils/code-generator');
- 
-module.exports = class BankManager {
+
+module.exports = class BankManager extends BaseManager {
     constructor(db, user) {
-        this.db = db;
-        this.user = user;
-        this.bankCollection = this.db.use(map.master.Bank);
+        super(db, user);
+        this.collection = this.db.use(map.master.Bank);
     }
 
-    read(paging) {
-        var _paging = Object.assign({
-            page: 1,
-            size: 20,
-            order: '_id',
-            asc: true
-        }, paging);
-
-        return new Promise((resolve, reject) => {
-            var deleted = {
-                _deleted: false
-            };
-            var query = _paging.keyword ? {
-                '$and': [deleted]
-            } : deleted;
-
-            if (_paging.keyword) {
-                var regex = new RegExp(_paging.keyword, "i");
-                var filterCode = {
-                    'code': {
-                        '$regex': regex
-                    }
-                };
-                var filterName = {
-                    'name': {
-                        '$regex': regex
-                    }
-                };
-                var $or = {
-                    '$or': [filterCode, filterName]
-                };
-
-                query['$and'].push($or);
+    _createIndexes() {
+        var dateIndex = {
+            name: `ix_${map.master.Bank}__updatedDate`,
+            key: {
+                _updatedDate: -1
             }
+        };
 
+        var codeIndex = {
+            name: `ix_${map.master.Bank}_code`,
+            key: {
+                code: 1
+            },
+            unique: true
+        };
 
-            this.bankCollection
-                .where(query)
-                .page(_paging.page, _paging.size)
-                .orderBy(_paging.order, _paging.asc)
-                .execute()
-                .then(banks => {
-                    resolve(banks);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
+        return this.collection.createIndexes([dateIndex, codeIndex]);
     }
 
-    getById(id) {
-        return new Promise((resolve, reject) => {
-            if (id === '')
-                resolve(null);
-            var query = {
-                _id: new ObjectId(id),
-                _deleted: false
+    _getQuery(paging) {
+
+        var basicFilter = {
+            _deleted: false
+        }, keywordFilter = {};
+
+        var query = {};
+
+        if (paging.keyword) {
+            var regex = new RegExp(paging.keyword, "i");
+            var filterCode = {
+                'code': {
+                    '$regex': regex
+                }
             };
-            this.getSingleByQuery(query)
-                .then(bank => {
-                    resolve(bank);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-    getByIdOrDefault(id) {
-        return new Promise((resolve, reject) => {
-            if (id === '')
-                resolve(null);
-            var query = {
-                _id: new ObjectId(id),
-                _deleted: false
+            var filterName = {
+                'name': {
+                    '$regex': regex
+                }
             };
-            this.getSingleOrDefaultByQuery(query)
-                .then(bank => {
-                    resolve(bank);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
 
-     getByCode(code) {
-        return new Promise((resolve, reject) => {
-            var query = {
-                code: code,
-                _deleted: false
+            keywordFilter = {
+                '$or': [filterCode, filterName]
             };
-            this.getSingleByQuery(query)
-                .then(bank => {
-                    resolve(bank);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
+        }
+        query = { '$and': [basicFilter, paging.filter, keywordFilter] };
+        return query;
     }
 
-    getSingleByQuery(query) {
-        return new Promise((resolve, reject) => {
-            this.bankCollection
-                .single(query)
-                .then(bank => {
-                    resolve(bank);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        })
-    }
-
-    getSingleOrDefaultByQuery(query) {
-        return new Promise((resolve, reject) => {
-            this.bankCollection
-                .singleOrDefault(query)
-                .then(bank => {
-                    resolve(bank);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        })
-    }
-
-    create(bank) {
-        return new Promise((resolve, reject) => {
-            //bank.code = generateCode("bank");
-            this._validate(bank)
-                .then(validBank => {
-                    this.bankCollection.insert(validBank)
-                        .then(id => {
-                            resolve(id);
-                        })
-                        .catch(e => {
-                            reject(e);
-                        })
-                })
-                .catch(e => {
-                    reject(e);
-                })
-        });
-    }
-
-    update(bank) {
-        return new Promise((resolve, reject) => {
-            this._validate(bank)
-                .then(validBank => {
-                    this.bankCollection.update(validBank)
-                        .then(id => {
-                            resolve(id);
-                        })
-                        .catch(e => {
-                            reject(e);
-                        })
-                })
-                .catch(e => {
-                    reject(e);
-                })
-        });
-    }
-
-    delete(bank) {
-        return new Promise((resolve, reject) => {
-            this._validate(bank)
-                .then(validBank => {
-                    validBank._deleted = true;
-                    this.bankCollection.update(validBank)
-                        .then(id => {
-                            resolve(id);
-                        })
-                        .catch(e => {
-                            reject(e);
-                        })
-                })
-                .catch(e => {
-                    reject(e);
-                })
-        });
-    }
- 
     _validate(bank) {
         var errors = {};
         return new Promise((resolve, reject) => {
             var valid = new Bank(bank);
             // 1. begin: Declare promises.
-            var getBank = this.bankCollection.singleOrDefault({
+            var getBank = this.collection.singleOrDefault({
                 "$and": [{
                     _id: {
                         '$ne': new ObjectId(valid._id)
                     }
                 }, {
-                        code: valid.code
-                    }]
+                    code: valid.code
+                }]
             });
             // 1. end: Declare promises.
 
@@ -228,13 +91,12 @@ module.exports = class BankManager {
                     else if (_bank) {
                         errors["code"] = "code already exists";
                     }
-
                     if (!valid.name || valid.name == '')
-                        errors["name"] = "name is required"; 
+                        errors["name"] = "name is required";
 
                     // 2c. begin: check if data has any error, reject if it has.
                     for (var prop in errors) {
-                        var ValidationError = require('../../validation-error');
+                        var ValidationError = require('module-toolkit').ValidationError;
                         reject(new ValidationError('data does not pass validation', errors));
                     }
 

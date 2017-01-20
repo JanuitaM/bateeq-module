@@ -22,7 +22,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
         this.user = user;
         this.expeditionDocCollection = this.db.use(map.inventory.ExpeditionDoc);
 
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
         var TransferOutDocManager = require('./transfer-out-doc-manager');
@@ -31,7 +31,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
         var SpkManager = require('../merchandiser/efr-pk-manager');
         this.spkManager = new SpkManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
     }
 
@@ -84,7 +84,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -100,13 +100,13 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(expeditionDoc => {
                     resolve(expeditionDoc);
                 })
@@ -129,7 +129,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.expeditionDocCollection
                 .singleOrDefault(query)
@@ -162,7 +162,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
                                 validTransferOutDoc.items = [];
                                 for (var item of spkDoc.spkDocument.items) {
                                     var newitem = {};
-                                    newitem.articleVariantId = item.articleVariantId;
+                                    newitem.itemId = item.itemId;
                                     newitem.quantity = item.quantity;
                                     validTransferOutDoc.items.push(newitem);
                                 }
@@ -179,7 +179,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
                             getTransferOuts = [];
                             //Create Promise Get Transfer Out using ID
                             for (var transferOutResultId of results) {
-                                getTransferOuts.push(this.transferOutDocManager.getByIdOrDefault(transferOutResultId));
+                                getTransferOuts.push(this.transferOutDocManager.getSingleByIdOrDefault(transferOutResultId));
                             }
                             //Get Transfer Out
                             Promise.all(getTransferOuts)
@@ -199,12 +199,12 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
                                     this.expeditionDocCollection.insert(validExpeditionDoc)
                                         .then(resultExpeditionId => {
                                             //Get Expedition Data
-                                            this.getByIdOrDefault(resultExpeditionId)
+                                            this.getSingleByIdOrDefault(resultExpeditionId)
                                                 .then(resultExpedition => {
                                                     var getSPKData = [];
                                                     //Create Promise get SPK Data for update
                                                     for (var spkDocument of validExpeditionDoc.spkDocuments) {
-                                                        getSPKData.push(this.spkManager.getByIdOrDefault(spkDocument.spkDocumentId));
+                                                        getSPKData.push(this.spkManager.getSingleByIdOrDefault(spkDocument.spkDocumentId));
                                                     }
                                                     //Get SPK Data
                                                     Promise.all(getSPKData)
@@ -325,7 +325,7 @@ module.exports = class PusatBarangBaruKirimBarangJadiAksesorisManager {
                                 if (spkDocument.spkDocument.destinationId.toString() != valid.destinationId.toString())
                                     spkDocumentError["spkDocumentId"] = "spkDocumentId's Destination is not right";
 
-                                getPromise.push(this.spkManager.getByIdOrDefault(spkDocument.spkDocumentId));
+                                getPromise.push(this.spkManager.getSingleByIdOrDefault(spkDocument.spkDocumentId));
                             }
                             spkDocumentErrors.push(spkDocumentError);
                         }

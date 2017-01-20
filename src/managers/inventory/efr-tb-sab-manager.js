@@ -10,7 +10,7 @@ var map = BateeqModels.map;
 
 var TransferInDoc = BateeqModels.inventory.TransferInDoc;
 var TransferInItem = BateeqModels.inventory.TransferInItem;
-var ArticleVariant = BateeqModels.core.article.ArticleVariant;
+var Item = BateeqModels.master.Item;
 var generateCode = require('../../utils/code-generator');
 
 const moduleId = "EFR-TB/SAB";
@@ -19,11 +19,11 @@ module.exports = class FinishingTerimaKomponenManager {
         this.db = db;
         this.user = user;
         this.transferInDocCollection = this.db.use(map.inventory.TransferInDoc);
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -31,7 +31,7 @@ module.exports = class FinishingTerimaKomponenManager {
         var TransferInDocManager = require('./transfer-in-doc-manager');
         this.transferInDocManager = new TransferInDocManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
     }
 
@@ -82,7 +82,7 @@ module.exports = class FinishingTerimaKomponenManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -98,13 +98,13 @@ module.exports = class FinishingTerimaKomponenManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferInDoc => {
                     resolve(transferInDoc);
                 })
@@ -127,7 +127,7 @@ module.exports = class FinishingTerimaKomponenManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferInDocCollection
                 .singleOrDefault(query)
@@ -151,8 +151,8 @@ module.exports = class FinishingTerimaKomponenManager {
                     this._validateFinishingVariant(validTransferInDoc)
                         .then(readyTransferInDoc => {
                             //Update Article Variant, add Finishings object
-                            this._appendArticleVariant(readyTransferInDoc)
-                                .then(latestTransferInDoc => {
+                            this._appendItem(readyTransferInDoc)
+                            .then(latestTransferInDoc => {
                                     // Create View Model to Transfer In
                                     var getTransferIns = [];
                                     var valid = latestTransferInDoc;
@@ -163,10 +163,10 @@ module.exports = class FinishingTerimaKomponenManager {
                                     NewTransferInDoc.reference = valid.reference;
                                     NewTransferInDoc.items = [];
                                     for (var item of valid.items) {
-                                        for (var finishing of item.articleVariant.finishings) {
-                                            if(finishing.quantity > 0) {
+                                        for (var finishing of item.item.finishings) {
+                                            if (finishing.quantity > 0) {
                                                 var item = {};
-                                                item.articleVariantId = finishing.articleVariant._id;
+                                                item.itemId = finishing.item._id;
                                                 item.quantity = finishing.quantity;
                                                 NewTransferInDoc.items.push(item);
                                             }
@@ -271,40 +271,40 @@ module.exports = class FinishingTerimaKomponenManager {
                         var itemErrors = [];
                         for (var item of valid.items) {
                             var itemError = {};
-                            if (!item.articleVariantId || item.articleVariantId == "") {
-                                itemError["articleVariantId"] = "articleVariantId is required";
+                            if (!item.itemId || item.itemId == "") {
+                                itemError["itemId"] = "itemId is required";
                             }
                             else {
                                 for (var i = valid.items.indexOf(item) + 1; i < valid.items.length; i++) {
                                     var otherItem = valid.items[i];
-                                    if (item.articleVariantId == otherItem.articleVariantId) {
-                                        itemError["articleVariantId"] = "articleVariantId already exists on another detail";
+                                    if (item.itemId == otherItem.itemId) {
+                                        itemError["itemId"] = "itemId already exists on another detail";
                                     }
                                 }
 
-                                var articleVariantError = {};
-                                if (item.articleVariant) {
-                                    if (!item.articleVariant.finishings || item.articleVariant.finishings.length == 0) {
-                                        articleVariantError["finishings"] = "Component is required";
+                                var itemError = {};
+                                if (item.item) {
+                                    if (!item.item.finishings || item.item.finishings.length == 0) {
+                                        itemError["finishings"] = "Component is required";
                                     }
                                     else {
                                         var finishingErrors = [];
-                                        for (var finishing of item.articleVariant.finishings) {
+                                        for (var finishing of item.item.finishings) {
                                             var finishingError = {};
-                                            if (!finishing.articleVariantId || finishing.articleVariantId == "") {
-                                                //finishingError["articleVariantId"] = "Component ArticleVariantId is required";
+                                            if (!finishing.itemId || finishing.itemId == "") {
+                                                //finishingError["itemId"] = "Component ItemId is required";
                                             }
                                             else {
-                                                for (var i = item.articleVariant.finishings.indexOf(finishing) + 1; i < item.articleVariant.finishings.length; i++) {
-                                                    var otherItem = item.articleVariant.finishings[i];
-                                                    if (finishing.articleVariantId == otherItem.articleVariantId) {
-                                                        finishingError["articleVariantId"] = "Component articleVariantId already exists on another detail";
+                                                for (var i = item.item.finishings.indexOf(finishing) + 1; i < item.item.finishings.length; i++) {
+                                                    var otherItem = item.item.finishings[i];
+                                                    if (finishing.itemId == otherItem.itemId) {
+                                                        finishingError["itemId"] = "Component itemId already exists on another detail";
                                                     }
                                                 }
                                             }
-                                            
-                                            if (!finishing.articleVariant.name || finishing.articleVariant.name == "") {
-                                                finishingError["articleVariantId"] = "Component ArticleVariantId is required";
+
+                                            if (!finishing.item.name || finishing.item.name == "") {
+                                                finishingError["itemId"] = "Component ItemId is required";
                                             }
 
                                             if (finishing.quantity == undefined || (finishing.quantity && finishing.quantity == '')) {
@@ -318,17 +318,17 @@ module.exports = class FinishingTerimaKomponenManager {
                                         }
                                         for (var finishingError of finishingErrors) {
                                             for (var prop in finishingError) {
-                                                articleVariantError.finishings = finishingErrors;
+                                                itemError.finishings = finishingErrors;
                                                 break;
                                             }
-                                            if (articleVariantError.finishings)
+                                            if (itemError.finishings)
                                                 break;
                                         }
 
                                     }
                                 }
-                                for (var prop in articleVariantError) {
-                                    itemError["articleVariant"] = articleVariantError;
+                                for (var prop in itemError) {
+                                    itemError["item"] = itemError;
                                     break;
                                 }
                             }
@@ -362,18 +362,18 @@ module.exports = class FinishingTerimaKomponenManager {
             var valid = transferInDoc;
             var getFinishings = [];
             for (var item of valid.items) {
-                for (var finishing of item.articleVariant.finishings) {
-                    if (!finishing.articleVariantId || finishing.articleVariantId == "") {
+                for (var finishing of item.item.finishings) {
+                    if (!finishing.itemId || finishing.itemId == "") {
                         var now = new Date();
                         var stamp = now / 1000 | 0;
                         var code = stamp.toString(36);
 
-                        //finishing.articleVariant = {};
-                        finishing.articleVariant.code = code;
-                        finishing.articleVariant.size = "Component";
-                        finishing.articleVariant.description = "Component Finishings";
-                        finishing.articleVariant = new ArticleVariant(finishing.articleVariant);
-                        getFinishings.push(this.articleVariantManager.create(finishing.articleVariant));
+                        //finishing.item = {};
+                        finishing.item.code = code;
+                        finishing.item.size = "Component";
+                        finishing.item.description = "Component Finishings";
+                        finishing.item = new Item(finishing.item);
+                        getFinishings.push(this.itemManager.create(finishing.item));
                     }
                     else {
                         getFinishings.push(Promise.resolve(null));
@@ -384,11 +384,12 @@ module.exports = class FinishingTerimaKomponenManager {
                 .then(results => {
                     var index = 0;
                     for (var item of valid.items) {
-                        for (var finishing of item.articleVariant.finishings) {
-                            if (!finishing.articleVariantId || finishing.articleVariantId == "") {
-                                finishing.articleVariant._id = results[index];
-                                finishing.articleVariantId = results[index];
-                                finishing.articleVariant = new ArticleVariant(finishing.articleVariant);
+                        for (var finishing of item.item.finishings) {
+                            if (!finishing.itemId || finishing.itemId == "") {
+                                finishing.item._id = results[index];
+                                finishing.itemId = results[index];
+                                finishing.item = new Item;
+                                (finishing.item);
                             }
                             index++;
                         }
@@ -401,13 +402,13 @@ module.exports = class FinishingTerimaKomponenManager {
         });
     }
 
-    _appendArticleVariant(transferInDoc) {
+    _appendItem(transferInDoc) {
         return new Promise((resolve, reject) => {
             var valid = transferInDoc;
             var getItems = [];
             for (var item of valid.items) {
-                var av = new ArticleVariant(item.articleVariant)
-                getItems.push(this.articleVariantManager.update(av));
+                var av = new Item(item.item);
+                getItems.push(this.itemManager.update(av));
             }
             Promise.all(getItems)
                 .then(results => {

@@ -1,6 +1,7 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var manager2;
 var manager3;
@@ -9,15 +10,14 @@ var testData;
 function getData(refno) {
     var source = testData.storages["UT-BJB"];
     var destination = testData.storages["UT-ST1"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
 
     var TransferInDoc = require('bateeq-models').inventory.TransferInDoc;
     var TransferInItem = require('bateeq-models').inventory.TransferInItem;
     var transferInDoc = new TransferInDoc();
 
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     transferInDoc.code = code;
     transferInDoc.date = now;
@@ -29,7 +29,7 @@ function getData(refno) {
 
     transferInDoc.remark = `remark for ${code}`;
 
-    transferInDoc.items.push(new TransferInItem({ articleVariantId: variant._id, quantity: 1, remark: 'transferInDoc.test' }));
+    transferInDoc.items.push(new TransferInItem({ itemId: variant._id, quantity: 1, remark: 'transferInDoc.test' }));
 
     return transferInDoc;
 }
@@ -37,7 +37,7 @@ function getData(refno) {
 function getDataSPK() {
     var source = testData.storages["UT-BJB"];
     var destination = testData.storages["UT-ST1"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
     var SpkDoc = require('bateeq-models').merchandiser.SPK;
     var SpkItem = require('bateeq-models').merchandiser.SPKItem;
     var spkDoc = new SpkDoc();
@@ -49,7 +49,7 @@ function getDataSPK() {
 
     spkDoc.reference = `reference[${spkDoc.date}]`;
 
-    spkDoc.items.push(new SpkItem({ articleVariantId: variant._id, quantity: 1, remark: 'SPK.test' }));
+    spkDoc.items.push(new SpkItem({ itemId: variant._id, quantity: 1, remark: 'SPK.test' }));
     return spkDoc;
 }
 
@@ -89,7 +89,7 @@ it('#01. should success when create new SPK data', function (done) {
     manager2.create(dataSPK)
         .then(id => {
             id.should.be.Object();
-            manager3.getById(id)
+            manager3.getSingleById(id)
                 .then(spkDoc => {
                     createdRef = spkDoc.packingList;
                     dataSPK.password = spkDoc.password;
@@ -219,7 +219,7 @@ it('#09. should error with property items minimum one', function (done) {
 });
 
 it('#10. should error with reference is exist and quantity items is 0', function (done) {
-    createdData.items = [{ articleVariantId: "578855c4964302281454fa51", quantity: 0, remark: 'transferInDoc.test' }];
+    createdData.items = [{ itemId: "578855c4964302281454fa51", quantity: 0, remark: 'transferInDoc.test' }];
     manager.create(createdData)
         .then(id => {
             done("should error with reference is exist and quantity items is 0");

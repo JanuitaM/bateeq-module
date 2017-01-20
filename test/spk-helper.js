@@ -15,7 +15,7 @@ var createSpkPba = function () {
 
                         manager.create(spk)
                             .then(id => {
-                                manager.getById(id)
+                                manager.getSingleById(id)
                                     .then(createdSpk => {
                                         resolve(createdSpk);
                                     })

@@ -7,7 +7,7 @@ var testData;
 // function getData() {
 //     var source = testData.storages["UT-ACC"];
 //     var destination = testData.storages["UT-ST1"];
-//     var variant = testData.variants["UT-AV1"];
+//     var variant = testData.items["UT-AV1"];
 
 //     var SpkDoc = require('bateeq-models').merchandiser.SPK;
 //     var SpkItem = require('bateeq-models').merchandiser.SPKItem;
@@ -19,7 +19,7 @@ var testData;
 
 //     spkDoc.reference = `reference[${spkDoc.date}]`;
 
-//     spkDoc.items.push(new SpkItem({ articleVariantId: variant._id, quantity: 1, remark: 'SPK PBA.test' }));
+//     spkDoc.items.push(new SpkItem({ itemId: variant._id, quantity: 1, remark: 'SPK PBA.test' }));
 //     return spkDoc;
 // }
 

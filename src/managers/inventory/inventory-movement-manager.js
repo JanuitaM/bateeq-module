@@ -17,11 +17,11 @@ module.exports = class InventoryMovementManager {
         this.user = user;
         this.inventoryMovementCollection = this.db.use(map.inventory.InventoryMovement);
 
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
     }
 
     read(paging) {
@@ -42,8 +42,8 @@ module.exports = class InventoryMovementManager {
 
             if (_paging.keyword) {
                 var regex = new RegExp(_paging.keyword, "i");
-                var filterArticleName = {
-                    'articleVariant.name': {
+                var filterItemName = {
+                    'item.name': {
                         '$regex': regex
                     }
                 };
@@ -53,7 +53,7 @@ module.exports = class InventoryMovementManager {
                     }
                 };
                 var $or = {
-                    '$or': [filterArticleName, filterStorageName]
+                    '$or': [filterItemName, filterStorageName]
                 };
 
                 query['$and'].push($or);
@@ -74,7 +74,7 @@ module.exports = class InventoryMovementManager {
         });
     }
 
-    readByStorageIdAndArticleVariantId(storageId, articleVariantId, paging) {
+    readByStorageIdAndItemId(storageId, itemId, paging) {
         var _paging = Object.assign({
             page: 1,
             size: 20,
@@ -89,17 +89,17 @@ module.exports = class InventoryMovementManager {
             var storage = {
                 storageId: new ObjectId(storageId)
             };
-            var articleVariant = {
-                articleVariantId: new ObjectId(articleVariantId)
+            var item = {
+                itemId: new ObjectId(itemId)
             };
             var query = {
-                '$and': [deleted, storage, articleVariant]
+                '$and': [deleted, storage, item]
             };
 
             if (_paging.keyword) {
                 var regex = new RegExp(_paging.keyword, "i");
-                var filterArticleName = {
-                    'articleVariant.name': {
+                var filterItemName = {
+                    'item.name': {
                         '$regex': regex
                     }
                 };
@@ -109,7 +109,7 @@ module.exports = class InventoryMovementManager {
                     }
                 };
                 var $or = {
-                    '$or': [filterArticleName, filterStorageName]
+                    '$or': [filterItemName, filterStorageName]
                 };
 
                 query['$and'].push($or);
@@ -130,7 +130,7 @@ module.exports = class InventoryMovementManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             if (id === '')
                 resolve(null);
@@ -148,7 +148,7 @@ module.exports = class InventoryMovementManager {
         });
     } 
      
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             if (id === '')
                 resolve(null);
@@ -156,7 +156,7 @@ module.exports = class InventoryMovementManager {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(inventoryMovement => {
                     resolve(inventoryMovement);
                 })
@@ -166,14 +166,14 @@ module.exports = class InventoryMovementManager {
         });
     } 
     
-    getByStorageIdAndArticleVarianIdAndId(storageId, articleVariantId, id) {
+    getByStorageIdAndItemIdAndId(storageId, itemId, id) {
         return new Promise((resolve, reject) => {
-            if (id === ''|| storageId ==='' || articleVariantId ==='')
+            if (id === ''|| storageId ==='' || itemId ==='')
                 resolve(null);
             var query = {
                 _id: new ObjectId(id),
                 storageId: new ObjectId(storageId),
-                articleVariantId: new ObjectId(articleVariantId),
+                itemId: new ObjectId(itemId),
                 _deleted: false
             };
             this.getSingleByQuery(query)
@@ -186,17 +186,17 @@ module.exports = class InventoryMovementManager {
         });
     }
     
-    getByStorageIdAndArticleVarianIdAndIdOrDefault(storageId, articleVariantId, id) {
+    getByStorageIdAndItemIdAndIdOrDefault(storageId, itemId, id) {
         return new Promise((resolve, reject) => {
-            if (id === ''|| storageId ==='' || articleVariantId ==='')
+            if (id === ''|| storageId ==='' || itemId ==='')
                 resolve(null);
             var query = {
                 _id: new ObjectId(id),
                 storageId: new ObjectId(storageId),
-                articleVariantId: new ObjectId(articleVariantId),
+                itemId: new ObjectId(itemId),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(inventoryMovement => {
                     resolve(inventoryMovement);
                 })
@@ -219,7 +219,7 @@ module.exports = class InventoryMovementManager {
         })
     }
     
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.inventoryMovementCollection
                 .singleOrDefault(query)
@@ -236,7 +236,7 @@ module.exports = class InventoryMovementManager {
         return new Promise((resolve, reject) => {
             this._validate(inventoryMovement)
                 .then(validInventoryMovement => {
-
+                    validInventoryMovement._createdDate = new Date();
                     this.inventoryMovementCollection.insert(validInventoryMovement)
                         .then(id => {
                             resolve(id);
@@ -292,25 +292,13 @@ module.exports = class InventoryMovementManager {
         var errors = {};
         return new Promise((resolve, reject) => {
             var valid = inventoryMovement;
-            // 1. begin: Declare promises.
-            var getInventoryMovementDoc = this.inventoryMovementCollection.singleOrDefault({
-                "$and": [{
-                    _id: {
-                        '$ne': new ObjectId(valid._id)
-                    }
-                }, {
-                        //code: valid.code
-                    }]
-            });
-            // 1. end: Declare promises.
-            var getStorage = this.storageManager.getById(inventoryMovement.storageId);
-            var getArticleVariant = this.articleVariantManager.getById(inventoryMovement.articleVariantId);
+            var getStorage = this.storageManager.getSingleById(inventoryMovement.storageId);
+            var getItem = this.itemManager.getSingleById(inventoryMovement.itemId);
  
-            Promise.all([getInventoryMovementDoc, getStorage, getArticleVariant])
+            Promise.all([getStorage, getItem])
                 .then(results => {
-                    var _inventoryMovement = results[0];
-                    var storage = results[1];
-                    var articleVariant = results[2];
+                    var storage = results[0];
+                    var item = results[1];
 
                     if (!valid.storageId || valid.storageId == '')
                         errors["storageId"] = "storageId is required";
@@ -321,14 +309,14 @@ module.exports = class InventoryMovementManager {
                         valid.storageId = storage._id;
                         valid.storage = storage;
                     } 
-                    if (!valid.articleVariantId || valid.articleVariantId == '')
-                        errors["articleVariantId"] = "articleVariantId is required";
-                    if (!articleVariant) {
-                        errors["articleVariantId"] = "articleVariantId not found";
+                    if (!valid.itemId || valid.itemId == '')
+                        errors["itemId"] = "itemId is required";
+                    if (!item) {
+                        errors["itemId"] = "itemId not found";
                     }
                     else {
-                        valid.articleVariantId = articleVariant._id;
-                        valid.articleVariant = articleVariant;
+                        valid.itemId = item._id;
+                        valid.item = item;
                     } 
                      
                     if (!valid.type || valid.type == '')
@@ -361,7 +349,7 @@ module.exports = class InventoryMovementManager {
                     
                      // 2c. begin: check if data has any error, reject if it has.
                     for (var prop in errors) {
-                        var ValidationError = require('../../validation-error');
+                        var ValidationError = require('module-toolkit').ValidationError;
                         reject(new ValidationError('data does not pass validation', errors));
                     }
                     valid.stamp(this.user.username, 'manager');

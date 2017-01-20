@@ -1,19 +1,19 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var testData;
 
 function getData() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-FNG"];
-    var variant = testData.variants["UT-AV1"];
-    var variantComponent = testData.variants["UT-AV2"];
+    var variant = testData.items["UT-AV1"];
+    var variantComponent = testData.items["UT-AV2"];
 
     var finishingDoc = {};
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     finishingDoc.code = code;
     finishingDoc.date = now;
@@ -25,10 +25,10 @@ function getData() {
 
     var item = {};
     item.quantity = 1;
-    item.articleVariantId = variant._id;
-    item.articleVariant = variant;
-    item.articleVariant.finishings = [];
-    item.articleVariant.finishings.push({ articleVariantId: variantComponent._id, quantity: 1, articleVariant: variantComponent });
+    item.itemId = variant._id;
+    item.item = variant;
+    item.item.finishings = [];
+    item.item.finishings.push({ itemId: variantComponent._id, quantity: 1, item: variantComponent });
     finishingDoc.items.push(item);
 
     return finishingDoc;

@@ -1,37 +1,36 @@
 var should = require('should');
 var helper = require('../helper');
-var validate = require('bateeq-models').validator.core.article;
+var validate = require('bateeq-models').validator.master.article;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
-    var ArticleVariant = require('bateeq-models').core.article.ArticleVariant;
-    var articleVariant = new ArticleVariant();
+    var Item = require('bateeq-models').master.article.Item;
+    var item = new Item();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
-    articleVariant.code = code;
-    articleVariant.name = `name[${code}]`;
-    articleVariant.description = `description for ${code}`;
-    articleVariant.size = `size[${code}]`;
-    articleVariant.domesticCOGS = 1;
-    articleVariant.domesticWholesale = 1;
-    articleVariant.domesticRetail = 1;
-    articleVariant.domesticSale = 1;
-    articleVariant.internationalCOGS = 1;
-    articleVariant.internationalWholesale = 1;
-    articleVariant.internationalRetail = 1;
-    articleVariant.internationalSale = 1;
+    item.code = code;
+    item.name = `name[${code}]`;
+    item.description = `description for ${code}`;
+    item.size = `size[${code}]`;
+    item.domesticCOGS = 1;
+    item.domesticWholesale = 1;
+    item.domesticRetail = 1;
+    item.domesticSale = 1;
+    item.internationalCOGS = 1;
+    item.internationalWholesale = 1;
+    item.internationalRetail = 1;
+    item.internationalSale = 1;
 
-    return articleVariant;
+    return item;
 }
 
 before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
-            var ArticleVariantManager = require('../../src/managers/core/article/article-variant-manager');
-            manager = new ArticleVariantManager(db, {
+            var ItemManager = require('../../src/managers/master/article/article-variant-manager');
+            manager = new ItemManager(db, {
                 username: 'unit-test'
             });
             done();
@@ -61,7 +60,7 @@ it(`#02. should success when get created data with id`, function(done) {
             _id: createdId
         })
         .then(data => {
-            validate.articleVariant(data);
+            validate.item(data);
             createdData = data;
             done();
         })
@@ -91,7 +90,7 @@ it(`#04. should success when get updated data with id`, function(done) {
             _id: createdId
         })
         .then(data => {
-            validate.articleVariant(data);
+            validate.item(data);
             data.code.should.equal(createdData.code);
             data.name.should.equal(createdData.name);
             data.description.should.equal(createdData.description);
@@ -118,7 +117,7 @@ it(`#06. should _deleted=true`, function(done) {
             _id: createdId
         })
         .then(data => {
-            validate.articleVariant(data);
+            validate.item(data);
             data._deleted.should.be.Boolean();
             data._deleted.should.equal(true);
             done();

@@ -1,15 +1,14 @@
 var should = require('should');
 var helper = require('../helper');
-var validate = require('bateeq-models').validator.inventory;
+var validate = require('bateeq-models').validator.master;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
-    var Storage = require('bateeq-models').inventory.Storage;
+    var Storage = require('bateeq-models').master.Storage;
     var storage = new Storage();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     storage.code = code;
     storage.name = `name[${code}]`;
@@ -23,7 +22,7 @@ function getData() {
 before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
-            var StorageManager = require('../../src/managers/inventory/storage-manager');
+            var StorageManager = require('../../src/managers/master/storage-manager');
             manager = new StorageManager(db, {
                 username: 'unit-test'
             });

@@ -1,22 +1,22 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var testData;
 
 function getData() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-BJB"];
-    var variant = testData.variants["UT-AV1"];
-
+    var variant = testData.items["UT-AV1"];
+    var variant2 = testData.finishedGoods["UT-FG2"];
 
     var TransferInDoc = require('bateeq-models').inventory.TransferInDoc;
     var TransferInItem = require('bateeq-models').inventory.TransferInItem;
     var transferInDoc = new TransferInDoc();
 
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     transferInDoc.code = code;
     transferInDoc.date = now;
@@ -29,7 +29,15 @@ function getData() {
     transferInDoc.remark = `remark for ${code}`;
 
     transferInDoc.items.push(new TransferInItem({
-        articleVariantId: variant._id,
+        itemId: variant._id,
+        item:variant,
+        quantity: 5,
+        remark: 'transferInDoc.test'
+    }));
+    
+    transferInDoc.items.push(new TransferInItem({
+        itemId: variant2._id,
+        item: variant2,
         quantity: 5,
         remark: 'transferInDoc.test'
     }));
@@ -51,6 +59,9 @@ before('#00. connect db', function(done) {
                     testData = result;
 
                     done();
+                })
+                .catch(e => {
+                    done(e);
                 });
         })
         .catch(e => {
@@ -84,7 +95,7 @@ it(`#02. should success when get created data with id`, function(done) {
         })
         .catch(e => {
             done(e);
-        })
+        });
 });
 
 it(`#03. should success when update created data`, function(done) {
@@ -113,7 +124,7 @@ it(`#04. should success when get updated data with id`, function(done) {
             validate.transferInDoc(data);
             data.remark.should.equal(createdData.remark);
             data.reference.should.equal(createdData.reference);
-            data.items.length.should.equal(1);
+            data.items.length.should.equal(2);
             done();
         })
         .catch(e => {
@@ -184,13 +195,13 @@ it('#08. should error with property items minimum one', function(done) {
             catch (ex) {
                 done(ex);
             }
-        })
+        });
 });
 
 it('#09. should error with property items must be greater one', function(done) {
     manager.create({
             items: [{}, {
-                articleVariantId: '578dd8a976d4f1003e0d7a3f'
+                itemId: '578dd8a976d4f1003e0d7a3f'
             }, {
                 quantity: 0
             }]
@@ -206,7 +217,7 @@ it('#09. should error with property items must be greater one', function(done) {
                 e.errors.should.have.property('items');
                 e.errors.items.should.Array();
                 for (var i of e.errors.items) {
-                    i.should.have.property('articleVariantId');
+                    i.should.have.property('itemId');
                     i.should.have.property('quantity');
                 }
                 done();
@@ -214,5 +225,5 @@ it('#09. should error with property items must be greater one', function(done) {
             catch (ex) {
                 done(ex);
             }
-        })
+        });
 });

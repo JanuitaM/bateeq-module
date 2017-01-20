@@ -5,6 +5,7 @@ var ObjectId = require('mongodb').ObjectId;
 
 // internal deps
 require('mongodb-toolkit');
+var BaseManager = require('module-toolkit').BaseManager;
 var BateeqModels = require('bateeq-models');
 var map = BateeqModels.map;
 var generateCode = require('../../utils/code-generator');
@@ -14,18 +15,17 @@ var TransferInItem = BateeqModels.inventory.TransferInItem;
 
 const moduleId = "EFR-TB/BBT";
 
-module.exports = class TokoTerimaBarangBaruManager {
+module.exports = class TokoTerimaBarangBaruManager extends BaseManager {
     constructor(db, user) {
-        this.db = db;
-        this.user = user;
+        super(db, user);
         this.transferInDocCollection = this.db.use(map.inventory.TransferInDoc);
         this.spkDocCollection = this.db.use(map.merchandiser.SPKDoc);
 
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -33,7 +33,7 @@ module.exports = class TokoTerimaBarangBaruManager {
         var TransferInDocManager = require('./transfer-in-doc-manager');
         this.transferInDocManager = new TransferInDocManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
 
         var SPKManager = require('../merchandiser/efr-pk-manager');
@@ -104,7 +104,7 @@ module.exports = class TokoTerimaBarangBaruManager {
                 'code': {
                     '$regex': regex
                 },
-                'expeditionDocumentId': { "$ne": {} }
+                // 'expeditionDocumentId': { "$ne": {} }
             };
 
             var isReceived = {
@@ -134,7 +134,7 @@ module.exports = class TokoTerimaBarangBaruManager {
     }
 
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -150,13 +150,13 @@ module.exports = class TokoTerimaBarangBaruManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferInDoc => {
                     resolve(transferInDoc);
                 })
@@ -179,7 +179,7 @@ module.exports = class TokoTerimaBarangBaruManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferInDocCollection
                 .singleOrDefault(query)
@@ -216,6 +216,20 @@ module.exports = class TokoTerimaBarangBaruManager {
             this._validate(transferInDoc)
                 .then(validTransferInDoc => {
                     validTransferInDoc.code = generateCode(moduleId);
+                    
+                    //kaga transfer in yang qty 0
+                    var length = validTransferInDoc.items.length;
+                    for(var i = 0; i < length; ) {
+                        var item = validTransferInDoc.items[i];
+                        if (item.quantity == 0) {
+                            validTransferInDoc.items.splice(i, 1);
+                        }
+                        else {
+                            i++
+                        }
+                        length = validTransferInDoc.items.length;
+                    } 
+                    
                     this.transferInDocManager.create(validTransferInDoc)
                         .then(id => {
                             var reference = transferInDoc.reference;
@@ -301,8 +315,8 @@ module.exports = class TokoTerimaBarangBaruManager {
                         var itemErrors = [];
                         for (var item of transferInDoc.items) {
                             var itemError = {};
-                            if (item.quantity <= 0)
-                                itemError["quantity"] = "items should not contains 0 quantity";
+                            if (item.quantity < 0)
+                                itemError["quantity"] = "items should not less than 0 quantity";
                             else
                                 if (item.quantity != spkDoc.items[index].quantity)
                                     if (item.remark == "")
@@ -319,13 +333,13 @@ module.exports = class TokoTerimaBarangBaruManager {
                                 break;
                         }
                         for (var prop in errors) {
-                            var ValidationError = require('../../validation-error');
+                            var ValidationError = require('module-toolkit').ValidationError;
                             reject(new ValidationError('data does not pass validation', errors));
                         }
                     }
                     else {
                         errors["reference"] = "reference not found";
-                        var ValidationError = require('../../validation-error');
+                        var ValidationError = require('module-toolkit').ValidationError;
                         reject(new ValidationError('data does not pass validation', errors));
                     }
                     resolve(transferInDoc);

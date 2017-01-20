@@ -26,7 +26,7 @@ module.exports = class AlterationInManager {
         var AlterationOutManager = require('./efr-kb-alt-manager');
         this.alterationOutManager = new AlterationOutManager(db,user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db,user);
     }
 
@@ -76,7 +76,7 @@ module.exports = class AlterationInManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -98,7 +98,7 @@ module.exports = class AlterationInManager {
                 reference: ref,
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferInDoc => {
                     resolve(transferInDoc);
                 })
@@ -121,7 +121,7 @@ module.exports = class AlterationInManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferInDocCollection
                 .singleOrDefault(query)

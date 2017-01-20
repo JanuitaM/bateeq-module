@@ -19,11 +19,11 @@ module.exports = class PusatReturTokoKirimBarangReturManager {
         this.db = db;
         this.user = user;
         this.transferOutDocCollection = this.db.use(map.inventory.TransferOutDoc);
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -31,7 +31,7 @@ module.exports = class PusatReturTokoKirimBarangReturManager {
         var TrasferOutManager = require('./transfer-out-doc-manager');
         this.transferOutDocManager = new TrasferOutManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
 
         var TokoKirimBarangReturnManager = require('../inventory/efr-kb-rtp-manager');
@@ -87,7 +87,7 @@ module.exports = class PusatReturTokoKirimBarangReturManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -103,13 +103,13 @@ module.exports = class PusatReturTokoKirimBarangReturManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -132,7 +132,7 @@ module.exports = class PusatReturTokoKirimBarangReturManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferOutDocCollection
                 .singleOrDefault(query)
@@ -222,7 +222,7 @@ module.exports = class PusatReturTokoKirimBarangReturManager {
             var getItem = [];
             if (valid.items && valid.items.length > 0) {
                 for (var item of valid.items) {
-                    getItem.push(this.inventoryManager.getByStorageIdAndArticleVarianIdOrDefault(valid.sourceId, item.articleVariantId))
+                    getItem.push(this.inventoryManager.getByStorageIdAndItemIdOrDefault(valid.sourceId, item.itemId))
                 }
             }
             else {

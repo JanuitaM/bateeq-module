@@ -5,223 +5,94 @@ var ObjectId = require('mongodb').ObjectId;
 
 // internal deps
 require('mongodb-toolkit');
+var BaseManager = require('module-toolkit').BaseManager;
+var StorageManager = require('../master/storage-manager');
 var BateeqModels = require('bateeq-models');
-var map = BateeqModels.map;
-
 var Store = BateeqModels.master.Store;
+var Storage = BateeqModels.master.Storage;
+var map = BateeqModels.map;
 //var generateCode = require('../../utils/code-generator');
- 
-module.exports = class StoreManager {
+
+module.exports = class StoreManager extends BaseManager {
     constructor(db, user) {
-        this.db = db;
-        this.user = user;
-        this.storeCollection = this.db.use(map.master.Store);
+        super(db, user);
+        this.collection = this.db.use(map.master.Store);
+        this.storageManager = new StorageManager(db, user);
     }
 
-    read(paging) {
-        var _paging = Object.assign({
-            page: 1,
-            size: 20,
-            order: '_id',
-            asc: true
-        }, paging);
-
-        return new Promise((resolve, reject) => {
-            var deleted = {
-                _deleted: false
-            };
-            var query = _paging.keyword ? {
-                '$and': [deleted]
-            } : deleted;
-
-            if (_paging.keyword) {
-                var regex = new RegExp(_paging.keyword, "i");
-                var filterCode = {
-                    'code': {
-                        '$regex': regex
-                    }
-                };
-                var filterName = {
-                    'name': {
-                        '$regex': regex
-                    }
-                };
-                var $or = {
-                    '$or': [filterCode, filterName]
-                };
-
-                query['$and'].push($or);
+    _createIndexes() {
+        var dateIndex = {
+            name: `ix_${map.master.Store}__updatedDate`,
+            key: {
+                _updatedDate: -1
             }
+        };
 
+        var codeIndex = {
+            name: `ix_${map.master.Store}_code`,
+            key: {
+                code: 1
+            },
+            unique: true
+        };
 
-            this.storeCollection
-                .where(query)
-                .page(_paging.page, _paging.size)
-                .orderBy(_paging.order, _paging.asc)
-                .execute()
-                .then(stores => {
-                    resolve(stores);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
+        return this.collection.createIndexes([dateIndex, codeIndex]);
     }
 
-    getById(id) {
-        return new Promise((resolve, reject) => {
-            if (id === '')
-                resolve(null);
-            var query = {
-                _id: new ObjectId(id),
-                _deleted: false
+    _getQuery(paging) {
+        var basicFilter = {
+            _deleted: false
+        }, keywordFilter = {};
+
+        var query = {};
+
+        if (paging.keyword) {
+            var regex = new RegExp(paging.keyword, "i");
+            var filterCode = {
+                'code': {
+                    '$regex': regex
+                }
             };
-            this.getSingleByQuery(query)
-                .then(store => {
-                    resolve(store);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-    getByIdOrDefault(id) {
-        return new Promise((resolve, reject) => {
-            if (id === '')
-                resolve(null);
-            var query = {
-                _id: new ObjectId(id),
-                _deleted: false
+            var filterName = {
+                'name': {
+                    '$regex': regex
+                }
             };
-            this.getSingleOrDefaultByQuery(query)
-                .then(store => {
-                    resolve(store);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
 
-     getByCode(code) {
-        return new Promise((resolve, reject) => {
-            var query = {
-                code: code,
-                _deleted: false
+            keywordFilter = {
+                '$or': [filterCode, filterName]
             };
-            this.getSingleByQuery(query)
-                .then(store => {
-                    resolve(store);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
+        }
+        query = { '$and': [basicFilter, paging.filter, keywordFilter] };
+        return query;
     }
 
-    getSingleByQuery(query) {
-        return new Promise((resolve, reject) => {
-            this.storeCollection
-                .single(query)
-                .then(store => {
-                    resolve(store);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        })
-    }
-
-    getSingleOrDefaultByQuery(query) {
-        return new Promise((resolve, reject) => {
-            this.storeCollection
-                .singleOrDefault(query)
-                .then(store => {
-                    resolve(store);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        })
-    }
-
-    create(store) {
-        return new Promise((resolve, reject) => {
-            //store.code = generateCode("store");
-            this._validate(store)
-                .then(validStore => { 
-                    this.storeCollection.insert(validStore)
-                        .then(id => {
-                            resolve(id);
-                        })
-                        .catch(e => {
-                            reject(e);
-                        })
-                })
-                .catch(e => {
-                    reject(e);
-                })
-        });
-    }
-
-    update(store) {
-        return new Promise((resolve, reject) => {
-            this._validate(store)
-                .then(validStore => {
-                    this.storeCollection.update(validStore)
-                        .then(id => {
-                            resolve(id);
-                        })
-                        .catch(e => {
-                            reject(e);
-                        })
-                })
-                .catch(e => {
-                    reject(e);
-                })
-        });
-    }
-
-    delete(store) {
-        return new Promise((resolve, reject) => {
-            this._validate(store)
-                .then(validStore => {
-                    validStore._deleted = true;
-                    this.storeCollection.update(validStore)
-                        .then(id => {
-                            resolve(id);
-                        })
-                        .catch(e => {
-                            reject(e);
-                        })
-                })
-                .catch(e => {
-                    reject(e);
-                })
-        });
-    }
- 
     _validate(store) {
         var errors = {};
         return new Promise((resolve, reject) => {
-            var valid = new Store(store);
+            var valid = store;
             // 1. begin: Declare promises.
-            var getStore = this.storeCollection.singleOrDefault({
+            var getStore = this.collection.singleOrDefault({
                 "$and": [{
                     _id: {
                         '$ne': new ObjectId(valid._id)
                     }
                 }, {
-                        code: valid.code
-                    }]
+                    code: valid.code
+                }]
             });
+
+            var getStorage = !ObjectId.isValid(valid.storageId) ? Promise.resolve(null) : this.storageManager.getSingleById(valid.storageId);
             // 1. end: Declare promises.
 
             // 2. begin: Validation.
-            Promise.all([getStore])
+            Promise.all([getStore, getStorage])
                 .then(results => {
                     var _store = results[0];
+                    var _storage = results[1];
+
+                    // if (!_storage)
+                    //     errors["storageId"] = "storage is invalid";
 
                     if (!valid.code || valid.code == '')
                         errors["code"] = "code is required";
@@ -230,20 +101,97 @@ module.exports = class StoreManager {
                     }
 
                     if (!valid.name || valid.name == '')
-                        errors["name"] = "name is required"; 
+                        errors["name"] = "name is required";
+
+                    if (!valid.address || valid.address == '')
+                        errors["address"] = "address is required";
+
+                    if (!valid.phone || valid.phone == '')
+                        errors["phone"] = "phone is required";
+
+                    if (!valid.salesCapital)
+                        errors["salesCapital"] = "Sales Capital is required";
+                    else if (valid.salesCapital <= 0)
+                        errors["salesCapital"] = "Sales Capital must be greater than 0";
 
                     // 2c. begin: check if data has any error, reject if it has.
                     for (var prop in errors) {
-                        var ValidationError = require('../../validation-error');
+                        var ValidationError = require('module-toolkit').ValidationError;
                         reject(new ValidationError('data does not pass validation', errors));
                     }
 
+                    if (_storage) {
+                        valid.storageId = _storage._id;
+                        valid.storage = _storage;
+                    }
+
+                    valid = new Store(valid);
                     valid.stamp(this.user.username, 'manager');
                     resolve(valid);
                 })
                 .catch(e => {
                     reject(e);
+                });
+        });
+    }
+
+    create(data) {
+        var _storeId, _storageId;
+        return new Promise((resolve, reject) => {
+            super.create(data)
+                .then(id => {
+                    _storeId = id;
+                    this.getSingleById(id)
+                        .then(store => {
+                            var storage = new Storage();
+                            storage.code = store.code;
+                            storage.name = store.name;
+                            storage.description = `storage for store ${store.code}`;
+                            storage.address = store.address;
+                            storage.phone = store.phone;
+
+                            this.storageManager.create(storage)
+                                .then(storageId => {
+                                    _storageId = storageId;
+                                    this.storageManager.getSingleById(storageId)
+                                        .then(storage => {
+                                            store.storageId = storageId;
+                                            store.storage = storage;
+                                            this.update(store)
+                                                .then(id => {
+                                                    resolve(id);
+                                                })
+                                                .catch(e => {
+                                                    reject(e);
+                                                });
+                                        })
+                                        .catch(e => {
+                                            reject(e);
+                                        });
+                                })
+                                .catch(e => {
+                                    reject(e);
+                                });
+                        })
+                        .catch(e => {
+                            reject(e);
+                        });
                 })
+                .catch(e => {
+                    var p = [];
+                    if (_storeId)
+                        p.push(this._delete(_storeId));
+                    if (_storageId)
+                        p.push(this.storageManager._delete(_storageId));
+
+                    Promise.all(p)
+                        .then(results => {
+                            reject(e);
+                        })
+                        .catch(e => {
+                            reject(e);
+                        });
+                });
         });
     }
 };

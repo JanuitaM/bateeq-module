@@ -1,17 +1,16 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.core;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
     var Account = require('bateeq-models').core.Account;
     var account = new Account();
+ 
+    var code = generateCode('UnitTest');
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = 'dev';//stamp.toString(36);
-
-    account.username = `${code}@unit-test.com`;
+    account.username = `dev@unit-test.com`;
     account.password ='Standar123';// `${code}`;
     return account;
 }

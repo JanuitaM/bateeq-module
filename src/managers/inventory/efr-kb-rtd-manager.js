@@ -19,11 +19,11 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
         this.db = db;
         this.user = user;
         this.transferOutDocCollection = this.db.use(map.inventory.TransferOutDoc);
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -31,7 +31,7 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
         var TransferOutDocManager = require('./transfer-out-doc-manager');
         this.transferOutDocManager = new TransferOutDocManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
 
     }
@@ -85,7 +85,7 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -101,13 +101,13 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -130,7 +130,7 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferOutDocCollection
                 .singleOrDefault(query)
@@ -262,11 +262,11 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
                     if (valid.items) {
                         var itemsData = [];
                         for (var item of valid.items) {
-                            if (item.articleVariantNewId && item.articleVariantNewId != '') { 
-                                itemsData.push(this.articleVariantManager.getById(item.articleVariantNewId));
+                            if (item.itemNewId && item.itemNewId != '') { 
+                                itemsData.push(this.itemManager.getSingleById(item.itemNewId));
                             }
                             else { 
-                                itemsData.push(this.articleVariantManager.getById(item.articleVariantId));
+                                itemsData.push(this.itemManager.getSingleById(item.itemId));
                             }
                         }
                         //get Article Variant
@@ -275,7 +275,7 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
                                 itemsData = [];
                                 for (var item of resultItems) {
                                     if (item) {
-                                        itemsData.push(this.inventoryManager.getByStorageIdAndArticleVarianIdOrDefault(valid.sourceId, item._id));
+                                        itemsData.push(this.inventoryManager.getByStorageIdAndItemIdOrDefault(valid.sourceId, item._id));
                                     }
                                     else {
                                         itemsData.push(Promise.resolve(null));
@@ -289,8 +289,8 @@ module.exports = class FinishingKirimBarangReturSelesaiPerbaikanManager {
                                         for (var item of valid.items) {
                                             var itemError = {};
                                             var stock = 0;
-                                            item.articleVariantId = resultItems[index]._id;
-                                            item.articleVariant = resultItems[index];
+                                            item.itemId = resultItems[index]._id;
+                                            item.item = resultItems[index];
                                             if (resultInventories[index]) {
                                                 stock = resultInventories[index].quantity;
                                             }

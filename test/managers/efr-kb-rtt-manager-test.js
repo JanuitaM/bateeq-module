@@ -1,21 +1,21 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var testData;
 
 function getData() {
     var source = testData.storages["UT-ST1"];
     var destination = testData.storages["UT-ST2"];
-    var variant = testData.variants["UT-AV2"];
+    var variant = testData.items["UT-AV2"];
 
     var TransferOutDoc = require('bateeq-models').inventory.TransferOutDoc;
     var TransferOutItem = require('bateeq-models').inventory.TransferOutItem;
     var transferOutDoc = new TransferOutDoc();
 
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     transferOutDoc.code = code;
     transferOutDoc.date = now;
@@ -27,12 +27,16 @@ function getData() {
 
     transferOutDoc.remark = `remark for ${code}`;
 
-    transferOutDoc.items.push(new TransferOutItem({ articleVariantId: variant._id, quantity: 1, remark: 'Doc efr-kb-rtt.test' }));
+    transferOutDoc.items.push(new TransferOutItem({
+        itemId: variant._id,
+        quantity: 1,
+        remark: 'Doc efr-kb-rtt.test'
+    }));
 
     return transferOutDoc;
 }
 
-before('#00. connect db', function (done) {
+before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
             var data = require("../data");
@@ -44,15 +48,18 @@ before('#00. connect db', function (done) {
                     });
                     testData = result;
                     done();
+                })
+                .catch(e => {
+                    done(e);
                 });
         })
         .catch(e => {
             done(e);
-        })
+        });
 });
 
 var createdId;
-it('#01. should success when create new data', function (done) {
+it('#01. should success when create new data', function(done) {
     var data = getData();
     manager.create(data)
         .then(id => {
@@ -66,8 +73,10 @@ it('#01. should success when create new data', function (done) {
 });
 
 var createdData;
-it(`#02. should success when get created data with id`, function (done) {
-    manager.getSingleByQuery({ _id: createdId })
+it(`#02. should success when get created data with id`, function(done) {
+    manager.getSingleByQuery({
+            _id: createdId
+        })
         .then(data => {
             validate.transferOutDoc(data);
             createdData = data;
@@ -78,7 +87,7 @@ it(`#02. should success when get created data with id`, function (done) {
         })
 });
 
-it(`#03. should success when update created data`, function (done) {
+it(`#03. should success when update created data`, function(done) {
 
     createdData.reference += '[updated]';
     createdData.remark += '[updated]';
@@ -95,8 +104,10 @@ it(`#03. should success when update created data`, function (done) {
         });
 });
 
-it(`#04. should success when get updated data with id`, function (done) {
-    manager.getSingleByQuery({ _id: createdId })
+it(`#04. should success when get updated data with id`, function(done) {
+    manager.getSingleByQuery({
+            _id: createdId
+        })
         .then(data => {
             validate.transferOutDoc(data);
             data.remark.should.equal(createdData.remark);
@@ -109,7 +120,7 @@ it(`#04. should success when get updated data with id`, function (done) {
         })
 });
 
-it(`#05. should success when delete data`, function (done) {
+it(`#05. should success when delete data`, function(done) {
     manager.delete(createdData)
         .then(id => {
             createdId.toString().should.equal(id.toString());
@@ -120,8 +131,10 @@ it(`#05. should success when delete data`, function (done) {
         });
 });
 
-it(`#06. should _deleted=true`, function (done) {
-    manager.getSingleByQuery({ _id: createdId })
+it(`#06. should _deleted=true`, function(done) {
+    manager.getSingleByQuery({
+            _id: createdId
+        })
         .then(data => {
             validate.transferOutDoc(data);
             data._deleted.should.be.Boolean();
@@ -134,8 +147,8 @@ it(`#06. should _deleted=true`, function (done) {
 });
 
 
-it('#07. should error with property items minimum one', function (done) {
-     var data = getData();
+it('#07. should error with property items minimum one', function(done) {
+    var data = getData();
     data.items = [];
     manager.create(data)
         .then(id => {
@@ -146,16 +159,20 @@ it('#07. should error with property items minimum one', function (done) {
                 e.errors.should.have.property('items');
                 e.errors.items.should.String();
                 done();
-            } catch (ex) {
+            }
+            catch (ex) {
                 done(ex);
             }
         })
 });
 
-it('#08. should error with property items must be greater one', function (done) {
-     var data = getData();
-    data.items = [{ articleVariantId: '578dd8a976d4f1003e0d7a3f' },
-        { quantity: 0 }];
+it('#08. should error with property items must be greater one', function(done) {
+    var data = getData();
+    data.items = [{
+        itemId: '578dd8a976d4f1003e0d7a3f'
+    }, {
+        quantity: 0
+    }];
     manager.create(data)
         .then(id => {
             done("Should not be error with property items must be greater one");
@@ -165,11 +182,12 @@ it('#08. should error with property items must be greater one', function (done) 
                 e.errors.should.have.property('items');
                 e.errors.items.should.Array();
                 for (var i of e.errors.items) {
-                    i.should.have.property('articleVariantId');
+                    i.should.have.property('itemId');
                     i.should.have.property('quantity');
                 }
                 done();
-            } catch (ex) {
+            }
+            catch (ex) {
                 done(ex);
             }
         })

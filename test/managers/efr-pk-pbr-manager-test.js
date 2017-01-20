@@ -8,7 +8,7 @@ var testData;
 function getData() {
     var source = testData.storages["UT-BJR"];
     var destination = testData.storages["UT-ST1"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
 
     var SpkDoc = require('bateeq-models').merchandiser.SPK;
     var SpkItem = require('bateeq-models').merchandiser.SPKItem;
@@ -20,7 +20,7 @@ function getData() {
 
     spkDoc.reference = `reference[${spkDoc.date}]`;
 
-    spkDoc.items.push(new SpkItem({ articleVariantId: variant._id, quantity: 1, remark: 'SPK PBR.test' }));
+    spkDoc.items.push(new SpkItem({ itemId: variant._id, quantity: 1, remark: 'SPK PBR.test' }));
     return spkDoc;
 }
 

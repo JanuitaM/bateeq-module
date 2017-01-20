@@ -1,21 +1,21 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var testData;
 
 function getData() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-BJR"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
     
     var TransferOutDoc = require('bateeq-models').inventory.TransferOutDoc;
     var TransferOutItem = require('bateeq-models').inventory.TransferOutItem;
     var transferOutDoc = new TransferOutDoc();
 
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     transferOutDoc.code = code;
     transferOutDoc.date = now;
@@ -27,7 +27,7 @@ function getData() {
 
     transferOutDoc.remark = `remark for ${code}`;
 
-    transferOutDoc.items.push(new TransferOutItem({ articleVariantId: variant._id, quantity: 1, remark: 'transferOutDoc.test' }));
+    transferOutDoc.items.push(new TransferOutItem({ itemId: variant._id, quantity: 1, remark: 'transferOutDoc.test' }));
 
     return transferOutDoc;
 }
@@ -35,7 +35,7 @@ function getData() {
 function getDataItemQuantityIsWrong() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-BJR"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
     
     var TransferOutDoc = require('bateeq-models').inventory.TransferOutDoc;
     var TransferOutItem = require('bateeq-models').inventory.TransferOutItem;
@@ -55,7 +55,7 @@ function getDataItemQuantityIsWrong() {
 
     transferOutDoc.remark = `remark for ${code}`;
  
-    transferOutDoc.items.push({ articleVariantId: variant._id, quantity: 0 }); 
+    transferOutDoc.items.push({ itemId: variant._id, quantity: 0 }); 
 
     return transferOutDoc;
 }
