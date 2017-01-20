@@ -27,11 +27,11 @@ module.exports = class TokoTransferStokManager {
         this.expeditionDocCollection = this.db.use(map.inventory.ExpeditionDoc);
         this.SPKDocCollection = this.db.use(map.merchandiser.SPKDoc);
 
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -39,7 +39,7 @@ module.exports = class TokoTransferStokManager {
         var TrasferOutManager = require('./transfer-out-doc-manager');
         this.transferOutDocManager = new TrasferOutManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
 
         var TransferInDocManager = require('./transfer-in-doc-manager');
@@ -106,7 +106,7 @@ module.exports = class TokoTransferStokManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -122,13 +122,13 @@ module.exports = class TokoTransferStokManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -151,7 +151,7 @@ module.exports = class TokoTransferStokManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferOutDocCollection
                 .singleOrDefault(query)
@@ -169,7 +169,8 @@ module.exports = class TokoTransferStokManager {
             this._validate(transferOutDoc)
                 .then(validTransferOutDoc => {
                     validTransferOutDoc.code = generateCode(moduleId);
-                    this.storageManager.getByCode("PST-3")
+                    // this.storageManager.getByCode("PST-3")
+                    this.storageManager.getByCode(validTransferOutDoc.destination.code)
                         .then(storage => {
                             var transferinDoc = {};
                             transferinDoc.code = generateCode("EFR-TB/BRT");
@@ -335,13 +336,13 @@ module.exports = class TokoTransferStokManager {
                         }
                     }
 
-                    var getDestination = this.storageManager.getByIdOrDefault(valid.destinationId);
-                    var getSource = this.storageManager.getByIdOrDefault(valid.sourceId);
+                    var getDestination = this.storageManager.getSingleByIdOrDefault(valid.destinationId);
+                    var getSource = this.storageManager.getSingleByIdOrDefault(valid.sourceId);
 
                     var getItem = [];
                     if (valid.items && valid.items.length > 0) {
                         for (var item of valid.items) {
-                            getItem.push(this.inventoryManager.getByStorageIdAndArticleVarianIdOrDefault(valid.sourceId, item.articleVariantId))
+                            getItem.push(this.inventoryManager.getByStorageIdAndItemIdOrDefault(valid.sourceId, item.itemId))
                         }
                     }
                     else {
@@ -378,8 +379,8 @@ module.exports = class TokoTransferStokManager {
                                     if (inventoryItems[index] == null) {
                                         var inventoryQuantity = 0;
                                     } else {
-                                        item.articleVariantId = inventoryItem.articleVariantId;
-                                        item.articleVariant = inventoryItem.articleVariant;
+                                        item.itemId = inventoryItem.itemId;
+                                        item.item = inventoryItem.item;
                                         var inventoryQuantity = inventoryItems[index].quantity;
                                     }
                                     index++;

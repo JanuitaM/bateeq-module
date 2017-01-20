@@ -1,15 +1,14 @@
 var should = require('should');
 var helper = require('../helper');
-var validate = require('bateeq-models').validator.core.article;
+var validate = require('bateeq-models').validator.master.article;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
-    var ArticleTheme = require('bateeq-models').core.article.ArticleTheme;
+    var ArticleTheme = require('bateeq-models').master.article.ArticleTheme;
     var articleTheme = new ArticleTheme();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     articleTheme.code = code;
     articleTheme.name = `name[${code}]`;
@@ -21,7 +20,7 @@ function getData() {
 before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
-            var ArticleThemeManager = require('../../src/managers/core/article/article-theme-manager');
+            var ArticleThemeManager = require('../../src/managers/master/article/article-theme-manager');
             manager = new ArticleThemeManager(db, {
                 username: 'unit-test'
             });

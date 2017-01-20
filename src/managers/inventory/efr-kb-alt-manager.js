@@ -26,7 +26,7 @@ module.exports = class AlterationOutManager {
         var FinishingTerimaBarangReturManager = require('./efr-tb-bjr-manager');
         this.finishingTerimaBarangReturManager = new FinishingTerimaBarangReturManager(db,user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db,user);
 
         var InventoryManager = require('./inventory-manager');
@@ -85,7 +85,7 @@ module.exports = class AlterationOutManager {
                 code: code,
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -95,7 +95,7 @@ module.exports = class AlterationOutManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -117,7 +117,7 @@ module.exports = class AlterationOutManager {
                 reference: ref,
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -142,7 +142,7 @@ module.exports = class AlterationOutManager {
 
     
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferOutDocCollection
                 .singleOrDefault(query)
@@ -203,7 +203,7 @@ module.exports = class AlterationOutManager {
                  var getItem = [];
                    if (valid.items && valid.items.length > 0) {
                        for (var item of valid.items) {
-                          tasks.push(this.inventoryManager.getByStorageIdAndArticleVarianIdOrDefault(valid.sourceId, item.articleVariantId))
+                          tasks.push(this.inventoryManager.getByStorageIdAndItemIdOrDefault(valid.sourceId, item.itemId))
                        }
                    }
                    else {
@@ -226,15 +226,15 @@ module.exports = class AlterationOutManager {
                             for(var item of valid.items){
                                 var itemError = {};
                                 for(var item2 of bjrTransferIn.items){
-                                    if(item.articleVariantId.toString() == item2.articleVariantId.toString()){
+                                    if(item.itemId.toString() == item2.itemId.toString()){
                                         if(item.quantity > item2.quantity){
-                                            itemError["articleVariantId"] = "item retur harus lebih kecil atau sama dengan item reference";
+                                            itemError["itemId"] = "item retur harus lebih kecil atau sama dengan item reference";
                                         }
                                     }
                                 }
                                 for(var item2 of checkInventory){
-                                   if (item.articleVariantId.toString() == item2.articleVariantId.toString() && item.quantity > item2.quantity) {
-                                      itemError["articleVariantId"] = "Tidak bisa simpan jika Quantity Pengiriman > Quantity Stock";
+                                   if (item.itemId.toString() == item2.itemId.toString() && item.quantity > item2.quantity) {
+                                      itemError["itemId"] = "Tidak bisa simpan jika Quantity Pengiriman > Quantity Stock";
                                    }
                                 }
                             itemErrors.push(itemError);

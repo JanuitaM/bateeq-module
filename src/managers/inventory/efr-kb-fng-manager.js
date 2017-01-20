@@ -19,11 +19,11 @@ module.exports = class FinishingKirimBarangBaruManager {
         this.db = db;
         this.user = user;
         this.transferOutDocCollection = this.db.use(map.inventory.TransferOutDoc);
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -34,7 +34,7 @@ module.exports = class FinishingKirimBarangBaruManager {
         var FinishedGoodsManager = require('./efr-hp-fng-manager');
         this.finishedGoodsManager = new FinishedGoodsManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
     }
 
@@ -87,7 +87,7 @@ module.exports = class FinishingKirimBarangBaruManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -103,13 +103,13 @@ module.exports = class FinishingKirimBarangBaruManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -125,7 +125,7 @@ module.exports = class FinishingKirimBarangBaruManager {
                 code: code,
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferOutDoc => {
                     resolve(transferOutDoc);
                 })
@@ -148,7 +148,7 @@ module.exports = class FinishingKirimBarangBaruManager {
         });
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferOutDocCollection
                 .singleOrDefault(query)
@@ -283,7 +283,7 @@ module.exports = class FinishingKirimBarangBaruManager {
                     var getItem = [];
                     if (valid.items && valid.items.length > 0) {
                         for (var item of valid.items) {
-                            getItem.push(this.inventoryManager.getByStorageIdAndArticleVarianIdOrDefault(valid.sourceId, item.articleVariantId))
+                            getItem.push(this.inventoryManager.getByStorageIdAndItemIdOrDefault(valid.sourceId, item.itemId))
                         }
                     }
                     else {

@@ -1,15 +1,14 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.master;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
     var CardType = require('bateeq-models').master.CardType;
     var cardType = new CardType();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     cardType.code = code;
     cardType.name = `name[${code}]`;

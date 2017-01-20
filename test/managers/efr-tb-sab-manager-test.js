@@ -1,14 +1,15 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var testData;
 
 function getData() {
     var source = testData.storages["UT-ACC"];
     var destination = testData.storages["UT-FNG"];
-    var variant = testData.variants["UT-AV1"];
-    var variantComponent = testData.variants["UT-AV2"];
+    var variant = testData.items["UT-AV1"];
+    var variantComponent = testData.items["UT-AV2"];
     var finishingDoc = {};
     var now = new Date();
     var stamp = now / 1000 | 0;
@@ -30,11 +31,11 @@ function getData() {
     var code2 = stamp.toString(36); 
     
     var item = {};
-    item.articleVariantId = variant._id;
-    item.articleVariant = variant;
-    item.articleVariant.finishings = [];
-    //item.articleVariant.finishings.push({ quantity: 10, articleVariant: { name : code2 } });
-    item.articleVariant.finishings.push({ articleVariantId: variantComponent._id, quantity: 1000, articleVariant: variantComponent });
+    item.itemId = variant._id;
+    item.item = variant;
+    item.item.finishings = [];
+    //item.item.finishings.push({ quantity: 10, item: { name : code2 } });
+    item.item.finishings.push({ itemId: variantComponent._id, quantity: 1000, item: variantComponent });
     finishingDoc.items.push(item);
      
     return finishingDoc;
@@ -43,12 +44,11 @@ function getData() {
 function getDataWithNewComponent() {
     var source = testData.storages["UT-ACC"];
     var destination = testData.storages["UT-FNG"];
-    var variant = testData.variants["UT-AV1"];
-    var variantComponent = testData.variants["UT-AV2"];
+    var variant = testData.items["UT-AV1"];
+    var variantComponent = testData.items["UT-AV2"];
     var finishingDoc = {};
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     finishingDoc.code = code;
     finishingDoc.date = now; 
@@ -66,11 +66,11 @@ function getDataWithNewComponent() {
     var code2 = stamp.toString(36); 
     
     var item = {};
-    item.articleVariantId = variant._id;
-    item.articleVariant = variant;
-    item.articleVariant.finishings = [];
-    item.articleVariant.finishings.push({ quantity: 1000, articleVariant: { name : "New Component" } });
-    item.articleVariant.finishings.push({ articleVariantId: variantComponent._id, quantity: 1000, articleVariant: variantComponent });
+    item.itemId = variant._id;
+    item.item = variant;
+    item.item.finishings = [];
+    item.item.finishings.push({ quantity: 1000, item: { name : "New Component" } });
+    item.item.finishings.push({ itemId: variantComponent._id, quantity: 1000, item: variantComponent });
     finishingDoc.items.push(item);
      
     return finishingDoc;

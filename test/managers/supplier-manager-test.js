@@ -1,15 +1,14 @@
 var should = require('should');
 var helper = require('../helper');
-var validate = require('bateeq-models').validator.inventory;
+var validate = require('bateeq-models').validator.master;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
-    var Supplier = require('bateeq-models').inventory.Supplier;
+    var Supplier = require('bateeq-models').master.Supplier;
     var supplier = new Supplier();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     supplier.code = code;
     supplier.name = `name[${code}]`;
@@ -23,7 +22,7 @@ function getData() {
 before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
-            var SupplierManager = require('../../src/managers/inventory/supplier-manager');
+            var SupplierManager = require('../../src/managers/master/supplier-manager');
             manager = new SupplierManager(db, {
                 username: 'unit-test'
             });
@@ -31,7 +30,7 @@ before('#00. connect db', function(done) {
         })
         .catch(e => {
             done(e);
-        })
+        });
 });
 
 var createdId;

@@ -1,6 +1,7 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 
 var transferInManager;
 var altOutManager;
@@ -11,7 +12,7 @@ var testData;
 function generateBJR(){
     var source = testData.storages["UT-BJR"];
     var destination = testData.storages["UT-FNG"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
 
 
     var TransferInDoc = require('bateeq-models').inventory.TransferInDoc;
@@ -19,8 +20,7 @@ function generateBJR(){
     var transferInDoc = new TransferInDoc();
 
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     transferInDoc.code = code;
     transferInDoc.date = now;
@@ -33,7 +33,7 @@ function generateBJR(){
     transferInDoc.remark = `remark for ${code}`;
 
     transferInDoc.items.push(new TransferInItem({
-        articleVariantId: variant._id,
+        itemId: variant._id,
         quantity: 2,
         remark: 'transferInDoc.test'
     }));
@@ -44,7 +44,7 @@ function generateBJR(){
 function generateALT(ref){
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-SWG"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
 
 
     var TransferOutDoc = require('bateeq-models').inventory.TransferOutDoc;
@@ -66,7 +66,7 @@ function generateALT(ref){
     transferOutDoc.remark = `remark for ${code}`;
 
     transferOutDoc.items.push(new TransferOutItem({
-        articleVariantId: variant._id,
+        itemId: variant._id,
         quantity: 2,
         remark: 'ef-kb-alt-doc.test'
     }));
@@ -109,7 +109,7 @@ it('#01. should success when create new Retur data', function(done) {
     bjrInManager.create(dataBJR)
         .then(id => {
             id.should.be.Object();
-            bjrInManager.getById(id)
+            bjrInManager.getSingleById(id)
             .then(bjrDoc => {
                 createdRef = bjrDoc.code;
                 done();    
@@ -140,7 +140,7 @@ it('#02. should success when create new ALteration data', function(done) {
 
 var createdData;
 it(`#03. should success when get created data with id`, function(done) {
-    altOutManager.getById(createdId)
+    altOutManager.getSingleById(createdId)
         .then(data => {
             validate.transferOutDoc(data);
             createdData = data;
@@ -167,10 +167,10 @@ it('#04. should error when create data with invalid reference', function(done) {
 it('#05. should error when items quantity larger than items reference quantity', function(done) {
     var data = generateALT(createdRef);
     var TransferInItem = require('bateeq-models').inventory.TransferInItem;
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
     data.items = [];
     data.items.push(new TransferInItem({
-        articleVariantId: variant._id,
+        itemId: variant._id,
         quantity: 3,
         remark: 'transferInDoc.test'
     }));
@@ -181,7 +181,7 @@ it('#05. should error when items quantity larger than items reference quantity',
         })
         .catch(e => {
             e.errors.should.have.property('items');
-            e.errors.items[0].articleVariantId.should.String();
+            e.errors.items[0].itemId.should.String();
             done();
         })
 });

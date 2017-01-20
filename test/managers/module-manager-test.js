@@ -1,15 +1,14 @@
 var should = require('should');
 var helper = require('../helper');
-var validate = require('bateeq-models').validator.core;
+var validate = require('bateeq-models').validator.master;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
-    var Module = require('bateeq-models').core.Module;
+    var Module = require('bateeq-models').master.Module;
     var module = new Module();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     module.code = code;
     module.name = `name[${code}]`;
@@ -22,7 +21,7 @@ function getData() {
 before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
-            var ModuleManager = require('../../src/managers/core/module-manager');
+            var ModuleManager = require('../../src/managers/master/module-manager');
             manager = new ModuleManager(db, {
                 username: 'unit-test'
             });

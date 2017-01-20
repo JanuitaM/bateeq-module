@@ -19,11 +19,11 @@ module.exports = class SPKBarangJadiReturManager {
         this.db = db;
         this.user = user;
         this.SPKDocCollection = this.db.use(map.merchandiser.SPKDoc);
-        var StorageManager = require('../inventory/storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('../inventory/inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -82,7 +82,7 @@ module.exports = class SPKBarangJadiReturManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             if (id === '')
                 resolve(null);
@@ -100,7 +100,7 @@ module.exports = class SPKBarangJadiReturManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             if (id === '')
                 resolve(null);
@@ -108,7 +108,7 @@ module.exports = class SPKBarangJadiReturManager {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(spkDoc => {
                     resolve(spkDoc);
                 })
@@ -131,7 +131,7 @@ module.exports = class SPKBarangJadiReturManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.SPKDocCollection
                 .singleOrDefault(query)
@@ -311,15 +311,15 @@ module.exports = class SPKBarangJadiReturManager {
                         }
                     }
 
-                    var getDestination = this.storageManager.getByIdOrDefault(valid.destinationId);
-                    var getSource = this.storageManager.getByIdOrDefault(valid.sourceId);
+                    var getDestination = this.storageManager.getSingleByIdOrDefault(valid.destinationId);
+                    var getSource = this.storageManager.getSingleByIdOrDefault(valid.sourceId);
 
                     var getItem = [];
 
                     if (valid.items && valid.items.length > 0) {
                         for (var item of valid.items) {
-                            // getItems.push(this.articleVariantManager.getByIdOrDefault(item.articleVariantId));
-                            getItem.push(this.inventoryManager.getByStorageIdAndArticleVarianIdOrDefault(valid.sourceId, item.articleVariantId))
+                            // getItems.push(this.itemManager.getSingleByIdOrDefault(item.articleVariantId));
+                            getItem.push(this.inventoryManager.getByStorageIdAndItemIdOrDefault(valid.sourceId, item.articleVariantId))
                         }
                     }
                     else {

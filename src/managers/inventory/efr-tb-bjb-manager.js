@@ -20,11 +20,11 @@ module.exports = class PusatBarangBaruTerimaBarangBaruManager {
         this.db = db;
         this.user = user;
         this.transferInDocCollection = this.db.use(map.inventory.TransferInDoc);
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -32,7 +32,7 @@ module.exports = class PusatBarangBaruTerimaBarangBaruManager {
         var TransferInDocManager = require('./transfer-in-doc-manager');
         this.transferInDocManager = new TransferInDocManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
     }
 
@@ -86,7 +86,7 @@ module.exports = class PusatBarangBaruTerimaBarangBaruManager {
     }
 
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -104,13 +104,13 @@ module.exports = class PusatBarangBaruTerimaBarangBaruManager {
 
 
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(transferInDoc => {
                     resolve(transferInDoc);
                 })
@@ -133,7 +133,7 @@ module.exports = class PusatBarangBaruTerimaBarangBaruManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.transferInDocCollection
                 .singleOrDefault(query)

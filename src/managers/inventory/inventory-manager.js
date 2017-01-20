@@ -19,11 +19,11 @@ module.exports = class InventoryManager {
         this.inventoryCollection = this.db.use(map.inventory.Inventory);
         this.inventoryMovementCollection = this.db.use(map.inventory.InventoryMovement);
 
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryMovementManager = require('./inventory-movement-manager');
         this.inventoryMovementManager = new InventoryMovementManager(db, user);
@@ -47,13 +47,13 @@ module.exports = class InventoryManager {
 
             if (_paging.keyword) {
                 var regex = new RegExp(_paging.keyword, "i");
-                var filterArticleCode = {
-                    'articleVariant.code': {
+                var filterItemCode = {
+                    'item.code': {
                         '$regex': regex
                     }
                 };
-                var filterArticleName = {
-                    'articleVariant.name': {
+                var filterItemName = {
+                    'item.name': {
                         '$regex': regex
                     }
                 };
@@ -63,7 +63,7 @@ module.exports = class InventoryManager {
                     }
                 };
                 var $or = {
-                    '$or': [filterArticleCode, filterArticleName, filterStorageName]
+                    '$or': [filterItemCode, filterItemName, filterStorageName]
                 };
 
                 query['$and'].push($or);
@@ -106,12 +106,12 @@ module.exports = class InventoryManager {
             if (_paging.keyword) {
                 var regex = new RegExp(_paging.keyword, "i");
                 var filterCode = {
-                    'articleVariant.code': {
+                    'item.code': {
                         '$regex': regex
                     }
                 };
                 var filterName = {
-                    'articleVariant.name': {
+                    'item.name': {
                         '$regex': regex
                     }
                 };
@@ -124,9 +124,7 @@ module.exports = class InventoryManager {
 
 
             this.inventoryCollection
-                .where(query)
-                .page(_paging.page, _paging.size)
-                .orderBy(_paging.order, _paging.asc)
+                .where(query) 
                 .execute()
                 .then(inventorys => {
                     resolve(inventorys);
@@ -137,7 +135,7 @@ module.exports = class InventoryManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             if (id === '')
                 resolve(null);
@@ -155,7 +153,7 @@ module.exports = class InventoryManager {
         });
     }
     
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             if (id === '')
                 resolve(null);
@@ -163,7 +161,7 @@ module.exports = class InventoryManager {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(inventory => {
                     resolve(inventory);
                 })
@@ -173,13 +171,13 @@ module.exports = class InventoryManager {
         });
     }
 
-    getByStorageIdAndArticleVarianId(storageId, articleVariantId) {
+    getByStorageIdAndItemId(storageId, itemId) {
         return new Promise((resolve, reject) => {
-            if (storageId === '' || articleVariantId ==='')
+            if (storageId === '' || itemId ==='')
                 resolve(null);
             var query = {
                 storageId: new ObjectId(storageId),
-                articleVariantId: new ObjectId(articleVariantId),
+                itemId: new ObjectId(itemId),
                 _deleted: false
             };
             this.getSingleByQuery(query)
@@ -192,16 +190,16 @@ module.exports = class InventoryManager {
         });
     }
 
-    getByStorageIdAndArticleVarianIdOrDefault(storageId, articleVariantId) {
+    getByStorageIdAndItemIdOrDefault(storageId, itemId) {
         return new Promise((resolve, reject) => {
-            if (storageId === '' || articleVariantId ==='')
+            if (storageId === '' || itemId ==='')
                 resolve(null);
             var query = {
                 storageId: new ObjectId(storageId),
-                articleVariantId: new ObjectId(articleVariantId),
+                itemId: new ObjectId(itemId),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(inventory => {
                     resolve(inventory);
                 })
@@ -224,7 +222,7 @@ module.exports = class InventoryManager {
         })
     }
      
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.inventoryCollection
                 .singleOrDefault(query)
@@ -241,7 +239,7 @@ module.exports = class InventoryManager {
         return new Promise((resolve, reject) => {
             this._validate(inventory)
                 .then(validInventory => {
-
+                    validInventory._createdDate = new Date();
                     this.inventoryCollection.insert(validInventory)
                         .then(id => {
                             resolve(id);
@@ -293,12 +291,12 @@ module.exports = class InventoryManager {
         });
     }
 
-    getInventory(storageId, articleVariantId) {
+    getInventory(storageId, itemId) {
         var query = {
             '$and': [{
                 storageId: new ObjectId(storageId)
             }, {
-                articleVariantId: new ObjectId(articleVariantId)
+                itemId: new ObjectId(itemId)
             }, {
                 _deleted: false
             }]
@@ -313,7 +311,7 @@ module.exports = class InventoryManager {
                     else {
                         var newInventory = new Inventory({
                             storageId: new ObjectId(storageId),
-                            articleVariantId: new ObjectId(articleVariantId)
+                            itemId: new ObjectId(itemId)
                         });
                         this.create(newInventory)
                             .then(docId => {
@@ -339,19 +337,19 @@ module.exports = class InventoryManager {
         })
     }
 
-    out(storageId, refNo, articleVariantId, quantity, remark) {
+    out(storageId, refNo, itemId, quantity, remark) {
         var absQuantity = Math.abs(quantity);
-        return this.move(storageId, refNo, 'OUT', articleVariantId, absQuantity * -1, remark);
+        return this.move(storageId, refNo, 'OUT', itemId, absQuantity * -1, remark);
     }
 
-    in (storageId, refNo, articleVariantId, quantity, remark) {
+    in (storageId, refNo, itemId, quantity, remark) {
         var absQuantity = Math.abs(quantity);
-        return this.move(storageId, refNo, 'IN', articleVariantId, absQuantity, remark);
+        return this.move(storageId, refNo, 'IN', itemId, absQuantity, remark);
     }
 
-    move(storageId, refNo, type, articleVariantId, quantity, remark) {
+    move(storageId, refNo, type, itemId, quantity, remark) {
         return new Promise((resolve, reject) => {
-            this.getInventory(storageId, articleVariantId)
+            this.getInventory(storageId, itemId)
                 .then(inventory => {
                     var originQuantity = inventory.quantity;
                     var movement = new InventoryMovement({
@@ -360,7 +358,7 @@ module.exports = class InventoryManager {
                         reference: refNo,
                         type: type,
                         storageId: inventory.storageId,
-                        articleVariantId: inventory.articleVariantId,
+                        itemId: inventory.itemId,
                         before: originQuantity,
                         quantity: quantity,
                         after: originQuantity + quantity,
@@ -374,8 +372,8 @@ module.exports = class InventoryManager {
 
                     Promise.all([createMovement, updateInventory])
                         .then(results => {
-                            var inventoryId = results[0];
-                            var movementId = results[1];
+                            var movementId = results[0];
+                            var inventoryId = results[1];
 
                             resolve(movementId);
                         })
@@ -393,25 +391,13 @@ module.exports = class InventoryManager {
         var errors = {};
         return new Promise((resolve, reject) => {
             var valid = new Inventory(inventory); 
-            // 1. begin: Declare promises.
-            var getInventoryDoc = this.inventoryCollection.singleOrDefault({
-                "$and": [{
-                    _id: {
-                        '$ne': new ObjectId(valid._id)
-                    }
-                }, {
-                        //code: valid.code
-                    }]
-            });
-            // 1. end: Declare promises.
-            var getStorage = this.storageManager.getById(inventory.storageId);
-            var getArticleVariant = this.articleVariantManager.getById(inventory.articleVariantId);
+            var getStorage = this.storageManager.getSingleById(inventory.storageId);
+            var getItem= this.itemManager.getSingleById(inventory.itemId);
 
-            Promise.all([getInventoryDoc, getStorage, getArticleVariant])
+            Promise.all([getStorage, getItem])
                 .then(results => {
-                    var _inventory = results[0];
-                    var storage = results[1];
-                    var articleVariant = results[2];
+                    var storage = results[0];
+                    var item = results[1];
 
                     if (!valid.storageId || valid.storageId == '')
                         errors["storageId"] = "storageId is required";
@@ -422,14 +408,14 @@ module.exports = class InventoryManager {
                         valid.storageId = storage._id;
                         valid.storage = storage;
                     } 
-                    if (!valid.articleVariantId || valid.articleVariantId == '')
-                        errors["articleVariantId"] = "articleVariantId is required";
-                    if (!articleVariant) {
-                        errors["articleVariantId"] = "articleVariantId not found";
+                    if (!valid.itemId || valid.itemId == '')
+                        errors["itemId"] = "itemId is required";
+                    if (!item) {
+                        errors["itemId"] = "itemId not found";
                     }
                     else {
-                        valid.articleVariantId = articleVariant._id;
-                        valid.articleVariant = articleVariant;
+                        valid.itemId = item._id;
+                        valid.item = item;
                     }
                     
                     if (valid.quantity == undefined || (valid.quantity && valid.quantity == '')) {

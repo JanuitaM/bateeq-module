@@ -4,7 +4,10 @@
   "description": "bateeq module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha test/index.js",
+    "cover": "istanbul cover _mocha",
+    "coveralls": "npm run cover -- --report lcovonly && cat ./coverage/lcov.info | coveralls",
+    "codeclimate":"codeclimate-test-reporter < ./coverage/lcov.info"
   },
   "repository": {
     "type": "git",
@@ -20,14 +23,20 @@
     "bateeq-models": "git+https://git@github.com/danliris/bateeq-models.git",
     "hashids": "^1.1.0",
     "js-toolkit": "git+https://github.com/pinkgorilla/js-toolkit.git",
+    "module-toolkit": "git+https://github.com/pinkgorilla/module-toolkit.git",
     "moment": "^2.14.1",
+    "mongo-factory": "^1.0.0",
     "mongodb-toolkit": "git+https://github.com/pinkgorilla/mongodb-toolkit.git",
-    "sha1": "^1.1.1"
+    "mssql": "^3.3.0",
+    "sha1": "^1.1.1",
+    "should": "^10.0.0"
   },
   "devDependencies": {
-    "mocha": "^2.5.3",
-    "mongo-factory": "^1.0.0",
-    "mongodb": "^2.1.18",
-    "should": "^9.0.2"
+    "coveralls": "^2.11.15",
+    "codeclimate-test-reporter": "^0.4.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.0.0",
+    "mocha-lcov-reporter": "^1.2.0",
+    "should": "^10.0.0"
   }
 }

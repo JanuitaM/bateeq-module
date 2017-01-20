@@ -15,17 +15,16 @@ module.exports = class FinishedGoodsManager extends ItemManager {
         super(db, user); 
     }
     
-    _getQuery(_paging) {
-        var basic = {
+    _getQuery(paging) {
+        var basicFilter = {
             _deleted: false,
             _type: 'finished-goods'
-        };
-        var query = _paging.keyword ? {
-            '$and': [basic]
-        } : basic;
+        }, keywordFilter={};
+        
+        var query = {};
 
-        if (_paging.keyword) {
-            var regex = new RegExp(_paging.keyword, "i");
+        if (paging.keyword) {
+            var regex = new RegExp(paging.keyword, "i");
             var filterCode = {
                 'code': {
                     '$regex': regex
@@ -36,12 +35,12 @@ module.exports = class FinishedGoodsManager extends ItemManager {
                     '$regex': regex
                 }
             };
-            var $or = {
+            
+            keywordFilter = {
                 '$or': [filterCode, filterName]
-            };
-
-            query['$and'].push($or);
+            }; 
         }
+        query = { '$and': [basicFilter, paging.filter, keywordFilter] };
         return query;
     }
 

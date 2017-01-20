@@ -1,6 +1,7 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.inventory;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 var manager2;
 var manager3;
@@ -9,13 +10,12 @@ var testData;
 function getDataHp() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-FNG"];
-    var variant = testData.variants["UT-AV1"];
-    var variantComponent = testData.variants["UT-AV2"];
+    var variant = testData.items["UT-AV1"];
+    var variantComponent = testData.items["UT-AV2"];
 
-    var finishingDoc = {};
     var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var finishingDoc = {};
+    var code = generateCode('UnitTest');
 
     finishingDoc.date = now;
     finishingDoc.sourceId = source._id;
@@ -26,10 +26,10 @@ function getDataHp() {
 
     var item = {};
     item.quantity = 1;
-    item.articleVariantId = variant._id;
-    item.articleVariant = variant;
-    item.articleVariant.finishings = [];
-    item.articleVariant.finishings.push({ articleVariantId: variantComponent._id, quantity: 1, articleVariant: variantComponent });
+    item.itemId = variant._id;
+    item.item = variant;
+    item.item.finishings = [];
+    item.item.finishings.push({ itemId: variantComponent._id, quantity: 1, item: variantComponent });
     finishingDoc.items.push(item);
 
     return finishingDoc;
@@ -39,7 +39,7 @@ function getDataHp() {
 function getDataKbFng() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-BJB"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
 
     var TransferOutDoc = require('bateeq-models').inventory.TransferOutDoc;
     var TransferOutItem = require('bateeq-models').inventory.TransferOutItem;
@@ -55,7 +55,7 @@ function getDataKbFng() {
     transferOutDoc.sourceId = source._id;
     transferOutDoc.reference = `reference for ${code}`;
     transferOutDoc.remark = `remark for ${code}`;
-    transferOutDoc.items.push(new TransferOutItem({ articleVariantId: variant._id, quantity: 1, remark: 'transferOutDoc.test' }));
+    transferOutDoc.items.push(new TransferOutItem({ itemId: variant._id, quantity: 1, remark: 'transferOutDoc.test' }));
 
     return transferOutDoc;
 
@@ -64,7 +64,7 @@ function getDataKbFng() {
 function getData() {
     var source = testData.storages["UT-FNG"];
     var destination = testData.storages["UT-BJB"];
-    var variant = testData.variants["UT-AV1"];
+    var variant = testData.items["UT-AV1"];
 
     var TransferInDoc = require('bateeq-models').inventory.TransferInDoc;
     var TransferInItem = require('bateeq-models').inventory.TransferInItem;
@@ -84,7 +84,7 @@ function getData() {
 
     transferInDoc.remark = `remark for ${code}`;
 
-    transferInDoc.items.push(new TransferInItem({ articleVariantId: variant._id, quantity: 10, remark: 'transferInDoc.test' }));
+    transferInDoc.items.push(new TransferInItem({ itemId: variant._id, quantity: 10, remark: 'transferInDoc.test' }));
 
     return transferInDoc;
 }
@@ -290,7 +290,7 @@ it('#11. should error with property items minimum one', function (done) {
 it('#12. should error with property items must be greater one', function (done) {
     manager.create({
         items: [
-            { articleVariantId: '578dd8a976d4f1003e0d7a3f' },
+            { itemId: '578dd8a976d4f1003e0d7a3f' },
             { quantity: 0 }]
     })
         .then(id => {
@@ -301,7 +301,7 @@ it('#12. should error with property items must be greater one', function (done) 
                 e.errors.should.have.property('items');
                 e.errors.items.should.Array();
                 for (var i of e.errors.items) {
-                    i.should.have.property('articleVariantId');
+                    i.should.have.property('itemId');
                     i.should.have.property('quantity');
                 }
                 done();

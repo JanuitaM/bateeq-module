@@ -38,7 +38,7 @@ function getSertStorages(db) {
     }];
 
 
-    var StorageManager = require("../src/managers/inventory/storage-manager");
+    var StorageManager = require("../src/managers/master/storage-manager");
     return new Promise((resolve, reject) => {
         var manager = new StorageManager(db, {
             username: "unit-test"
@@ -48,7 +48,7 @@ function getSertStorages(db) {
         for (var storage of storages) {
             var promise = new Promise((resolve, reject) => {
                 var _storage = storage;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _storage.code
                     })
                     .then(data => {
@@ -57,7 +57,7 @@ function getSertStorages(db) {
                         else {
                             manager.create(_storage)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -83,21 +83,24 @@ function getSertStorages(db) {
     });
 }
 
-function getSertVariants(db) {
+function getSertItems(db) {
 
     var variants = [{
         code: "UT-AV1",
         name: "Silhouette S[UT]",
         description: "Unit test data: article silhoutte [S]",
-        size: "S"
+        uom: "PCS",
+        components:[]
+        
     }, {
         code: "UT-AV2",
         name: "Dress Tumaruntum S[UT]",
         description: "Unit test data: article dress tumaruntum [S]",
-        size: "S"
+        uom: "PCS",
+        components:[]
     }];
 
-    var VariantManager = require("../src/managers/core/article/article-variant-manager");
+    var VariantManager = require("../src/managers/master/item-manager");
     return new Promise((resolve, reject) => {
         var manager = new VariantManager(db, {
             username: "unit-test"
@@ -107,7 +110,7 @@ function getSertVariants(db) {
         for (var variant of variants) {
             var promise = new Promise((resolve, reject) => {
                 var _variant = variant;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _variant.code
                     })
                     .then(data => {
@@ -116,7 +119,114 @@ function getSertVariants(db) {
                         else {
                             manager.create(_variant)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
+                                        resolve(createdData);
+                                    });
+                                })
+                                .catch(e => {
+                                    reject(e);
+                                });
+                        }
+                    })
+                    .catch(e => {
+                        reject(e);
+                    });
+            });
+            promises.push(promise);
+        }
+
+        Promise.all(promises)
+            .then(variants => {
+                resolve(variants);
+            })
+            .catch(e => {
+                reject(e);
+            });
+    });
+}
+
+function getSertFinishedGoods(db) { 
+    var variants = [{
+        code: "UT-FG1",
+        name: "Silhouette S[UT]",
+        description: "Unit test data: article silhoutte [S]",
+        uom: "PCS",
+        components:[],
+        articleId: {},
+        article: { 
+            realizationOrder: "RO001"
+        },
+        size: 'S',
+        domesticCOGS: 100000,
+        domesticWholesale: 100000,
+        domesticRetail: 100000,
+        domesticSale: 100000, 
+        internationalCOGS: 150000,
+        internationalWholesale: 150000,
+        internationalRetail: 150000,
+        internationalSale: 150000 
+    }, 
+    {
+        code: "UT-FG2",
+        name: "Silhouette M[UT]",
+        description: "Unit test data: article silhoutte [M]",
+        uom: "PCS",
+        components:[],
+        articleId: {},
+        article: { 
+            realizationOrder: "RO001"
+        },
+        size: 'M',
+        domesticCOGS: 100000,
+        domesticWholesale: 100000,
+        domesticRetail: 100000,
+        domesticSale: 100000, 
+        internationalCOGS: 150000,
+        internationalWholesale: 150000,
+        internationalRetail: 150000,
+        internationalSale: 150000 
+    }, 
+    {
+        code: "UT-FG3",
+        name: "Dress Tumaruntum S[UT]",
+        description: "Unit test data: article dress tumaruntum [S]",
+        uom: "PCS",
+        components:[],
+        articleId: {},
+        article: { 
+            realizationOrder: "RO002"
+        },
+        size: 'S',
+        domesticCOGS: 100000,
+        domesticWholesale: 100000,
+        domesticRetail: 100000,
+        domesticSale: 100000, 
+        internationalCOGS: 150000,
+        internationalWholesale: 150000,
+        internationalRetail: 150000,
+        internationalSale: 150000 
+    }];
+
+    var Manager = require("../src/managers/master/finished-goods-manager");
+    return new Promise((resolve, reject) => {
+        var manager = new Manager(db, {
+            username: "unit-test"
+        });
+        var promises = [];
+
+        for (var variant of variants) {
+            var promise = new Promise((resolve, reject) => {
+                var _variant = variant;
+                manager.getSingleByQueryOrDefault({
+                        code: _variant.code
+                    })
+                    .then(data => {
+                        if (data)
+                            resolve(data);
+                        else {
+                            manager.create(_variant)
+                                .then(id => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -353,7 +463,7 @@ function getSertModules(db, storages) {
         }
     }];
 
-    var ModuleManager = require("../src/managers/core/module-manager");
+    var ModuleManager = require("../src/managers/master/module-manager");
     return new Promise((resolve, reject) => {
         var manager = new ModuleManager(db, {
             username: "unit-test"
@@ -363,7 +473,7 @@ function getSertModules(db, storages) {
         for (var module of modules) {
             var promise = new Promise((resolve, reject) => {
                 var _module = module;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _module.code
                     })
                     .then(data => {
@@ -372,7 +482,7 @@ function getSertModules(db, storages) {
                         else {
                             manager.create(_module)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -405,7 +515,7 @@ function getSertSuppliers(db) {
         description: "Unit test data: supplier 01."
     }];
 
-    var SupplierManager = require("../src/managers/inventory/supplier-manager");
+    var SupplierManager = require("../src/managers/master/supplier-manager");
     return new Promise((resolve, reject) => {
         var manager = new SupplierManager(db, {
             username: "unit-test"
@@ -415,7 +525,7 @@ function getSertSuppliers(db) {
         for (var supplier of suppliers) {
             var promise = new Promise((resolve, reject) => {
                 var _supplier = supplier;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _supplier.code
                     })
                     .then(data => {
@@ -424,7 +534,7 @@ function getSertSuppliers(db) {
                         else {
                             manager.create(_supplier)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -456,66 +566,170 @@ function getSertStores(db, storages) {
         code: "ST-FNG",
         name: "Finishing[UT]",
         description: "Unit test data: finishing storage.",
-        storageId: storages["UT-FNG"]._id,
-        storage: storages["UT-FNG"],
+        //storageId: storages["UT-FNG"]._id,
+        //storage: storages["UT-FNG"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-BJB",
         name: "Pusat - Finished Goods[UT]",
         description: "Unit test data: finished goods storage.",
-        storageId: storages["UT-BJB"]._id,
-        storage: storages["UT-BJB"],
+        //storageId: storages["UT-BJB"]._id,
+        //storage: storages["UT-BJB"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-BJR",
         name: "Pusat - Return Finished Goods[UT]",
         description: "Unit test data: returned finished goods storage.",
-        storageId: storages["UT-BJR"]._id,
-        storage: storages["UT-BJR"],
+        //storageId: storages["UT-BJR"]._id,
+        //storage: storages["UT-BJR"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-ACC",
         name: "Accessories[UT]",
         description: "Unit test data: accessories storage.",
-        storageId: storages["UT-ACC"]._id,
-        storage: storages["UT-ACC"],
+        //storageId: storages["UT-ACC"]._id,
+        //storage: storages["UT-ACC"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-SWG",
         name: "Sewing[UT]",
         description: "Unit test data: sewing storage.",
-        storageId: storages["UT-SWG"]._id,
-        storage: storages["UT-SWG"],
+        //storageId: storages["UT-SWG"]._id,
+        //storage: storages["UT-SWG"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-MHD",
         name: "Merchandiser[UT]",
         description: "Unit test data: merhandiser storage.",
-        storageId: storages["UT-MHD"]._id,
-        storage: storages["UT-MHD"],
+        //storageId: storages["UT-MHD"]._id,
+        //storage: storages["UT-MHD"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-ST1",
         name: "Store 01[UT]",
         description: "Unit test data: store 01 storage",
-        storageId: storages["UT-ST1"]._id,
-        storage: storages["UT-ST1"],
+        //storageId: storages["UT-ST1"]._id,
+        //storage: storages["UT-ST1"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }, {
         code: "ST-ST2",
         name: "Store 02[UT]",
         description: "Unit test data: store 02 storage",
-        storageId: storages["UT-ST2"]._id,
-        storage: storages["UT-ST2"],
+        //storageId: storages["UT-ST2"]._id,
+        //storage: storages["UT-ST2"],
         salesCategoryId: {},
-        salesCategory: {}
+        salesCategory: {},
+        salesTarget: 5000000,
+        address: "Address",
+        phone: "123456789",
+        salesCapital: "100000000",
+        shifts: [{
+            shift: 1,
+            dateFrom: new Date("2000-01-01T00:00:00"),
+            dateTo: new Date("2000-01-01T11:59:59")
+        }, {
+            shift: 2,
+            dateFrom: new Date("2000-01-01T12:00:00"),
+            dateTo: new Date("2000-01-01T23:59:59")
+        }]
     }];
 
 
@@ -529,7 +743,7 @@ function getSertStores(db, storages) {
         for (var store of stores) {
             var promise = new Promise((resolve, reject) => {
                 var _store = store;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _store.code
                     })
                     .then(data => {
@@ -538,7 +752,7 @@ function getSertStores(db, storages) {
                         else {
                             manager.create(_store)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -591,7 +805,7 @@ function getSertBanks(db) {
         for (var bank of banks) {
             var promise = new Promise((resolve, reject) => {
                 var _bank = bank;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _bank.code
                     })
                     .then(data => {
@@ -600,7 +814,7 @@ function getSertBanks(db) {
                         else {
                             manager.create(_bank)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -653,7 +867,7 @@ function getSertCardTypes(db) {
         for (var cardType of cardTypes) {
             var promise = new Promise((resolve, reject) => {
                 var _cardType = cardType;
-                manager.getSingleOrDefaultByQuery({
+                manager.getSingleByQueryOrDefault({
                         code: _cardType.code
                     })
                     .then(data => {
@@ -662,7 +876,7 @@ function getSertCardTypes(db) {
                         else {
                             manager.create(_cardType)
                                 .then(id => {
-                                    manager.getById(id).then(createdData => {
+                                    manager.getSingleById(id).then(createdData => {
                                         resolve(createdData);
                                     });
                                 })
@@ -688,105 +902,35 @@ function getSertCardTypes(db) {
     });
 }
 
-function getSertRewardTypes(db) {
-
-    var rewardTypes = [{
-        code: "RT-DISKON",
-        name: "Diskon",
-        description: "Unit test data: Diskon Reward type."
-    }, {
-        code: "RT-DISKON-PRODUK-TERTENTU",
-        name: "Diskon Produk Tertentu",
-        description: "Unit test data: Diskon Produk Tertentu Reward type."
-    }, {
-        code: "RT-PRODUK-TERTENTU",
-        name: "Produk Tertentu",
-        description: "Unit test data: Produk Tertentu Reward type."
-    }, {
-        code: "RT-HARGA-SPESIAL",
-        name: "Harga Spesial",
-        description: "Unit test data: Harga Spesial Reward type."
-    }, {
-        code: "RT-VOUCHER",
-        name: "Voucher",
-        description: "Unit test data: Voucher Reward type."
-    }];
-
-
-    var RewardTypeManager = require("../src/managers/sales/reward-type-manager");
-    return new Promise((resolve, reject) => {
-        var manager = new RewardTypeManager(db, {
-            username: "unit-test"
-        });
-        var promises = [];
-
-        for (var rewardType of rewardTypes) {
-            var promise = new Promise((resolve, reject) => {
-                var _rewardType = rewardType;
-                manager.getSingleOrDefaultByQuery({
-                        code: _rewardType.code
-                    })
-                    .then(data => {
-                        if (data)
-                            resolve(data);
-                        else {
-                            manager.create(_rewardType)
-                                .then(id => {
-                                    manager.getById(id).then(createdData => {
-                                        resolve(createdData);
-                                    });
-                                })
-                                .catch(e => {
-                                    reject(e);
-                                });
-                        }
-                    })
-                    .catch(e => {
-                        reject(e);
-                    });
-            });
-            promises.push(promise);
-        }
-
-        Promise.all(promises)
-            .then(rewardTypes => {
-                resolve(rewardTypes);
-            })
-            .catch(e => {
-                reject(e);
-            });
-    });
-}
-
 module.exports = function(db) {
     return new Promise((resolve, reject) => {
-        Promise.all([getSertStorages(db), getSertVariants(db), getSertSuppliers(db), getSertBanks(db), getSertCardTypes(db), getSertRewardTypes(db)])
+        Promise.all([getSertStorages(db), getSertItems(db), getSertFinishedGoods(db), getSertSuppliers(db), getSertBanks(db), getSertCardTypes(db)])
             .then(results => {
                 var storages = {};
-                var variants = {};
+                var items = {};
+                var finishedGoods = {};
                 var suppliers = {}; 
                 var banks = {};
                 var cardTypes = {};
-                var rewardTypes = {};
 
                 for (var storage of results[0])
                     storages[storage.code] = storage;
 
                 for (var variant of results[1])
-                    variants[variant.code] = variant;
+                    items[variant.code] = variant;
+                    
+                for (var variant of results[2])
+                    finishedGoods[variant.code] = variant;
                 
-                for (var supplier of results[2])
+                for (var supplier of results[3])
                     suppliers[supplier.code] = supplier; 
                     
-                for (var bank of results[3])
+                for (var bank of results[4])
                     banks[bank.code] = bank;
                     
-                for (var cardType of results[4])
+                for (var cardType of results[5])
                     cardTypes[cardType.code] = cardType;
                     
-                for (var rewardType of results[5])
-                    rewardTypes[rewardType.code] = rewardType;
-
                 Promise.all([getSertModules(db, storages), getSertStores(db, storages)])
                     .then(results => { 
                         var modules = {};
@@ -800,12 +944,12 @@ module.exports = function(db) {
 
                         resolve({
                             storages: storages,
-                            variants: variants,
+                            items: items,
+                            finishedGoods: finishedGoods,
                             suppliers : suppliers,
                             stores : stores,
                             banks : banks,
                             cardTypes : cardTypes,
-                            rewardTypes : rewardTypes,
                             modules: modules
                         });
                     })

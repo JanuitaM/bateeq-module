@@ -1,19 +1,22 @@
 var should = require('should');
 var helper = require('../helper');
 var validate = require('bateeq-models').validator.master;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
     var Store = require('bateeq-models').master.Store;
     var store = new Store();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     store.code = code;
     store.name = `name[${code}]`;
     store.description = `description for ${code}`; 
+    store.address = `address for ${code}`; 
+    store.phone = `phone ${code}`; 
+    store.salesCapital = 5000; 
+    store.storageId = null;
 
     return store;
 }

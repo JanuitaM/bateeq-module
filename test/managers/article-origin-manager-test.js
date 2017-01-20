@@ -1,15 +1,14 @@
 var should = require('should');
 var helper = require('../helper');
-var validate = require('bateeq-models').validator.core.article;
+var validate = require('bateeq-models').validator.master.article;
+var generateCode = require('../../src/utils/code-generator');
 var manager;
 
 function getData() {
-    var ArticleOrigin = require('bateeq-models').core.article.ArticleOrigin;
+    var ArticleOrigin = require('bateeq-models').master.article.ArticleOrigin;
     var articleOrigin = new ArticleOrigin();
 
-    var now = new Date();
-    var stamp = now / 1000 | 0;
-    var code = stamp.toString(36);
+    var code = generateCode('UnitTest');
 
     articleOrigin.code = code;
     articleOrigin.name = `name[${code}]`;
@@ -21,7 +20,7 @@ function getData() {
 before('#00. connect db', function(done) {
     helper.getDb()
         .then(db => {
-            var ArticleOriginManager = require('../../src/managers/core/article/article-origin-manager');
+            var ArticleOriginManager = require('../../src/managers/master/article/article-origin-manager');
             manager = new ArticleOriginManager(db, {
                 username: 'unit-test'
             });

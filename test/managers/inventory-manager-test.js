@@ -6,7 +6,7 @@ var testData;
 
 
 var storageId;
-var articleVariantId;
+var itemId;
 
 before('#00. connect db', function (done) {
     helper.getDb()
@@ -20,7 +20,7 @@ before('#00. connect db', function (done) {
                     });
                     testData = result;
                     storageId = testData.storages["UT-FNG"]._id.toString();
-                    articleVariantId = testData.variants["UT-AV1"]._id.toString(); 
+                    itemId = testData.items["UT-AV1"]._id.toString(); 
                     done();
                 });
         })
@@ -33,7 +33,7 @@ before('#00. connect db', function (done) {
 
 var createdInId;
 it('#01. should success when move-in new data', function (done) { 
-    manager.in(storageId, 'unit-test', articleVariantId, 10, 'remark-unit-test')
+    manager.in(storageId, 'unit-test', itemId, 10, 'remark-unit-test')
         .then(id => {
             id.should.be.Object();
             createdInId = id;
@@ -47,7 +47,7 @@ it('#01. should success when move-in new data', function (done) {
 var createdOutId;
 it('#02. should success when move-out new data', function (done) {
 
-    manager.out(storageId, 'unit-test', articleVariantId, 10, 'remark-unit-test')
+    manager.out(storageId, 'unit-test', itemId, 10, 'remark-unit-test')
         .then(id => {
             id.should.be.Object();
             createdOutId = id;
@@ -62,7 +62,7 @@ it('#03. should success when read by storageId', function (done) {
     manager.readByStorageId(storageId)
         .then(inventories => {
             inventories.should.not.equal(null);
-            inventories.should.instanceof(Array);
+            inventories.data.should.instanceof(Array);
 
             done();
         })
@@ -71,8 +71,8 @@ it('#03. should success when read by storageId', function (done) {
         })
 });
 
-it('#04. should success when read by storageId and articleVariantId', function (done) {
-    manager.getByStorageIdAndArticleVarianId(storageId, articleVariantId)
+it('#04. should success when read by storageId and itemId', function (done) {
+    manager.getByStorageIdAndItemId(storageId, itemId)
         .then(inventory => {
             validate.inventory(inventory)
             done();

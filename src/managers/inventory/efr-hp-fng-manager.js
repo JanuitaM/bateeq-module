@@ -13,7 +13,7 @@ var TransferInDoc = BateeqModels.inventory.TransferInDoc;
 var TransferInItem = BateeqModels.inventory.TransferInItem;
 var TransferOutDoc = BateeqModels.inventory.TransferOutDoc;
 var TransferOutItem = BateeqModels.inventory.TransferOutItem;
-var ArticleVariant = BateeqModels.core.article.ArticleVariant;
+var Item = BateeqModels.master.Item;
 var generateCode = require('../../utils/code-generator');
 
 const moduleId = "EFR-HP/FNG";
@@ -27,11 +27,11 @@ module.exports = class FinishedGoodsManager {
         this.transferInDocCollection = this.db.use(map.inventory.TransferInDoc);
         this.transferOutDocCollection = this.db.use(map.inventory.TransferOutDoc);
 
-        var StorageManager = require('./storage-manager');
+        var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
-        var ArticleVariantManager = require('../core/article/article-variant-manager');
-        this.articleVariantManager = new ArticleVariantManager(db, user);
+        var ItemManager = require('../master/item-manager');
+        this.itemManager = new ItemManager(db, user);
 
         var InventoryManager = require('./inventory-manager');
         this.inventoryManager = new InventoryManager(db, user);
@@ -42,7 +42,7 @@ module.exports = class FinishedGoodsManager {
         var TransferOutDocManager = require('./transfer-out-doc-manager');
         this.transferOutDocManager = new TransferOutDocManager(db, user);
 
-        var ModuleManager = require('../core/module-manager');
+        var ModuleManager = require('../master/module-manager');
         this.moduleManager = new ModuleManager(db, user);
 
     }
@@ -92,7 +92,7 @@ module.exports = class FinishedGoodsManager {
         });
     }
 
-    getById(id) {
+    getSingleById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -108,13 +108,13 @@ module.exports = class FinishedGoodsManager {
         });
     }
 
-    getByIdOrDefault(id) {
+    getSingleByIdOrDefault(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(finishedGoodsDoc => {
                     resolve(finishedGoodsDoc);
                 })
@@ -130,7 +130,7 @@ module.exports = class FinishedGoodsManager {
                 code: code,
                 _deleted: false
             };
-            this.getSingleOrDefaultByQuery(query)
+            this.getSingleByQueryOrDefault(query)
                 .then(finishedGoodsDoc => {
                     resolve(finishedGoodsDoc);
                 })
@@ -153,7 +153,7 @@ module.exports = class FinishedGoodsManager {
         })
     }
 
-    getSingleOrDefaultByQuery(query) {
+    getSingleByQueryOrDefault(query) {
         return new Promise((resolve, reject) => {
             this.finishedGoodsDocCollection
                 .singleOrDefault(query)
@@ -184,7 +184,7 @@ module.exports = class FinishedGoodsManager {
                     validTransferInDoc.items = [];
                     for (var item of finishedGoodDoc.items) {
                         var newitem = {};
-                        newitem.articleVariantId = item.articleVariant._id;
+                        newitem.itemId = item.item._id;
                         newitem.quantity = item.quantity;
                         validTransferInDoc.items.push(newitem);
                     }
@@ -199,9 +199,9 @@ module.exports = class FinishedGoodsManager {
                     validTransferOutDoc.destinationId = finishedGoodDoc.destinationId;
                     validTransferOutDoc.items = [];
                     for (var item of finishedGoodDoc.items) {
-                        for (var finishing of item.articleVariant.finishings) {
+                        for (var finishing of item.item.finishings) {
                             var newitem = {};
-                            newitem.articleVariantId = finishing.articleVariant._id;
+                            newitem.itemId = finishing.item._id;
                             newitem.quantity = finishing.quantity;
                             validTransferOutDoc.items.push(newitem);
                         }
@@ -217,9 +217,9 @@ module.exports = class FinishedGoodsManager {
                             var transferOutResultId = results[1];
                             getMethods = [];
                             //Create Promise Get Transfer In using ID
-                            getMethods.push(this.transferInDocManager.getByIdOrDefault(transferInResultId));
+                            getMethods.push(this.transferInDocManager.getSingleByIdOrDefault(transferInResultId));
                             //Create Promise Get Transfer Out using ID
-                            getMethods.push(this.transferOutDocManager.getByIdOrDefault(transferOutResultId));
+                            getMethods.push(this.transferOutDocManager.getSingleByIdOrDefault(transferOutResultId));
 
                             //Get Transfer In
                             //Get Transfer Out
@@ -338,34 +338,34 @@ module.exports = class FinishedGoodsManager {
                         var itemErrors = [];
                         for (var item of valid.items) {
                             var itemError = {};
-                            if (!item.articleVariantId || item.articleVariantId == "") {
-                                itemError["articleVariantId"] = "articleVariantId is required";
+                            if (!item.itemId || item.itemId == "") {
+                                itemError["itemId"] = "itemId is required";
                             }
                             else {
                                 for (var i = valid.items.indexOf(item) + 1; i < valid.items.length; i++) {
                                     var otherItem = valid.items[i];
-                                    if (item.articleVariantId == otherItem.articleVariantId) {
-                                        itemError["articleVariantId"] = "articleVariantId already exists on another detail";
+                                    if (item.itemId == otherItem.itemId) {
+                                        itemError["itemId"] = "itemId already exists on another detail";
                                     }
                                 }
-                                var articleVariantError = {};
-                                if (item.articleVariant) {
-                                    if (!item.articleVariant.finishings || item.articleVariant.finishings.length == 0) {
-                                        articleVariantError["finishings"] = "Component is required";
+                                var itemError = {};
+                                if (item.item) {
+                                    if (!item.item.finishings || item.item.finishings.length == 0) {
+                                        itemError["finishings"] = "Component is required";
                                     }
                                     else {
                                         var finishingErrors = [];
-                                        for (var finishing of item.articleVariant.finishings) {
+                                        for (var finishing of item.item.finishings) {
                                             var getItemComponent = Promise.resolve(null);
                                             var finishingError = {};
-                                            if (!finishing.articleVariantId || finishing.articleVariantId == "") {
-                                                finishingError["articleVariantId"] = "Component ArticleVariantId is required";
+                                            if (!finishing.itemId || finishing.itemId == "") {
+                                                finishingError["itemId"] = "Component ItemId is required";
                                             }
                                             else {
-                                                for (var i = item.articleVariant.finishings.indexOf(finishing) + 1; i < item.articleVariant.finishings.length; i++) {
-                                                    var otherItem = item.articleVariant.finishings[i];
-                                                    if (finishing.articleVariantId == otherItem.articleVariantId) {
-                                                        finishingError["articleVariantId"] = "Component articleVariantId already exists on another detail";
+                                                for (var i = item.item.finishings.indexOf(finishing) + 1; i < item.item.finishings.length; i++) {
+                                                    var otherItem = item.item.finishings[i];
+                                                    if (finishing.itemId == otherItem.itemId) {
+                                                        finishingError["itemId"] = "Component itemId already exists on another detail";
                                                     }
                                                 }
                                             }
@@ -376,23 +376,23 @@ module.exports = class FinishedGoodsManager {
                                                 finishingError["quantity"] = "quantity must be greater than 0";
                                             }
                                             else {
-                                                getItemComponent = this.inventoryManager.getByStorageIdAndArticleVarianId(valid.sourceId, finishing.articleVariantId);
+                                                getItemComponent = this.inventoryManager.getByStorageIdAndItemId(valid.sourceId, finishing.itemId);
                                             }
                                             getItemComponents.push(getItemComponent)
                                             finishingErrors.push(finishingError);
                                         }
                                         for (var finishingError of finishingErrors) {
                                             for (var prop in finishingError) {
-                                                articleVariantError.finishings = finishingErrors;
+                                                itemError.finishings = finishingErrors;
                                                 break;
                                             }
-                                            if (articleVariantError.finishings)
+                                            if (itemError.finishings)
                                                 break;
                                         }
                                     }
                                 }
-                                for (var prop in articleVariantError) {
-                                    itemError["articleVariant"] = articleVariantError;
+                                for (var prop in itemError) {
+                                    itemError["item"] = itemError;
                                     break;
                                 }
                             }
@@ -423,10 +423,10 @@ module.exports = class FinishedGoodsManager {
                             var itemErrors = [];
                             for (var item of valid.items) {
                                 var itemError = {};
-                                var articleVariantError = {};
+                                var itemError = {};
                                 var finishingErrors = [];
                                 var index = 0;
-                                for (var finishing of item.articleVariant.finishings) {
+                                for (var finishing of item.item.finishings) {
                                     var finishingError = {};
                                     if (itemComponents[index]) {
                                         if (finishing.quantity > itemComponents[index].quantity) {
@@ -438,14 +438,14 @@ module.exports = class FinishedGoodsManager {
                                 }
                                 for (var finishingError of finishingErrors) {
                                     for (var prop in finishingError) {
-                                        articleVariantError.finishings = finishingErrors;
+                                        itemError.finishings = finishingErrors;
                                         break;
                                     }
-                                    if (articleVariantError.finishings)
+                                    if (itemError.finishings)
                                         break;
                                 }
-                                for (var prop in articleVariantError) {
-                                    itemError["articleVariant"] = articleVariantError;
+                                for (var prop in itemError) {
+                                    itemError["item"] = itemError;
                                     break;
                                 }
                                 itemErrors.push(itemError);
