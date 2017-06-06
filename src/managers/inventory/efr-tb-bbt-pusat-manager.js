@@ -13,9 +13,9 @@ var generateCode = require('../../utils/code-generator');
 var TransferInDoc = BateeqModels.inventory.TransferInDoc;
 var TransferInItem = BateeqModels.inventory.TransferInItem;
 
-const moduleId = "EFR-TB/BAT";
+const moduleId = "EFR-TB/BBP";
 
-module.exports = class TokoTerimaAksesorisManager extends BaseManager {
+module.exports = class PusatTerimaBarangBaruManager extends BaseManager {
     constructor(db, user) {
         super(db, user);
         this.collection = this.db.use(map.inventory.TransferInDoc);
@@ -51,25 +51,50 @@ module.exports = class TokoTerimaAksesorisManager extends BaseManager {
         return new Promise((resolve, reject) => {
             var deleted = {
                 _deleted: false
-            };
+            }, keywordFilter = {};
 
-            var regex = new RegExp("EFR\-PK/\PBA", "i");
+            var regex = new RegExp("EFR\-PK/\PBJ|EFR\-PK/\PBR", "i");
             var filterCode = {
                 'code': {
                     '$regex': regex
                 },
                 // 'expeditionDocumentId': { "$ne": {} }
             };
+            var destination;
+            if (Object.getOwnPropertyNames(paging.filter).length != 0) {
+                destination =
+                    {
+                        "destination.code":
+                        {
+                            $in: paging.filter
+                        }
+                    }
+            }
 
             var isReceived = {
                 isReceived: false
             };
 
+            if (paging.keyword) {
+                var regex = new RegExp(paging.keyword, "i");
+
+                var filterPackingList = {
+                    'packingList': {
+                        '$regex': regex
+                    }
+                };
+                keywordFilter = {
+                    '$or': [filterPackingList]
+                };
+            }
+
             var query = {
                 $and: [
                     deleted,
                     filterCode,
-                    isReceived
+                    isReceived,
+                    destination,
+                    keywordFilter
                 ]
             }
 
@@ -86,6 +111,7 @@ module.exports = class TokoTerimaAksesorisManager extends BaseManager {
                 });
         });
     }
+
 
     _getQuery(paging) {
         var deletedFilter = {
@@ -107,9 +133,8 @@ module.exports = class TokoTerimaAksesorisManager extends BaseManager {
         }
         query = { '$and': [deletedFilter, paging.filter, keywordFilter] }
         return query;
-    } 
-
-   getById(id) {
+    }
+    getById(id) {
         return new Promise((resolve, reject) => {
             var query = {
                 _id: new ObjectId(id),
@@ -190,7 +215,7 @@ module.exports = class TokoTerimaAksesorisManager extends BaseManager {
         return new Promise((resolve, reject) => {
             this._validate(transferInDoc)
                 .then(validTransferInDoc => {
-                    validTransferInDoc.code = generateCode(moduleId)
+                    validTransferInDoc.code = generateCode(moduleId);
 
                     //kaga transfer in yang qty 0
                     var length = validTransferInDoc.items.length;
@@ -213,7 +238,7 @@ module.exports = class TokoTerimaAksesorisManager extends BaseManager {
                                     resolve(id);
                                 }).catch(e => {
                                     reject(e);
-                                })
+                                });
                         })
                         .catch(e => {
                             reject(e);

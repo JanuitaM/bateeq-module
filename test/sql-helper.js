@@ -6,10 +6,8 @@ var config = {
     user: 'Adminbateeq',
     password: 'Standar123.',
     server: 'efrata.database.windows.net',
-
-     database: 'efrata.pos',
-    //database: 'testefrata',
-
+    // database: 'efrata.pos',
+    database: 'testefrata',
     options: {
         encrypt: true
     },
@@ -18,16 +16,15 @@ var config = {
 
 };
 
-module.exports = {
-    getConnect: function () {
+module.exports = class SqlConnection { 
+    getConnect(){
         return new Promise((resolve, reject) => {
             sql.connect(config, function (err) {
                 resolve(new sql.Request());
             })
         });
     }
-    ,
-    startConnection: function () {
+    startConnection() {
         return new Promise((resolve, reject) => {
             sql.connect(config, function (err) {
                 if(err)
@@ -36,12 +33,12 @@ module.exports = {
             })
         });
     }
-    ,
-    transaction: function () {
+    
+    transaction() {
         return new sql.Transaction();
     }
-    ,
-    transactionRequest: function (transaction) {
+    
+    transactionRequest(transaction) {
         return new sql.Request(transaction);
     }
 }

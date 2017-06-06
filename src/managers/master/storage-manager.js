@@ -46,6 +46,22 @@ module.exports = class StorageManager extends BaseManager {
         return query;
     }
 
+    getByCode(_code) {
+        return new Promise((resolve, reject) => {
+            var query = {
+                _deleted: false,
+                code: _code
+            };
+            this.collection.where(query).execute()
+                .then((results) => {
+                    resolve(results.data);
+                })
+                .catch(e => {
+                    reject(e);
+                });
+        });
+    }
+
     _validate(storage) {
         var errors = {};
         return new Promise((resolve, reject) => {

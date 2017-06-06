@@ -8,17 +8,16 @@ require('mongodb-toolkit');
 var BateeqModels = require('bateeq-models');
 var generateCode = require('../../utils/code-generator');
 var map = BateeqModels.map;
-
+var BaseManager = require('module-toolkit').BaseManager;
 var TransferOutDoc = BateeqModels.inventory.TransferOutDoc;
 var TransferOutItem = BateeqModels.inventory.TransferOutItem;
 
 var moduleId = "EFR-KB/RTP";
 
-module.exports = class TokoKirimBarangReturnManager {
+module.exports = class TokoKirimBarangReturnManager extends BaseManager {
     constructor(db, user) {
-        this.db = db;
-        this.user = user;
-        this.transferOutDocCollection = this.db.use(map.inventory.TransferOutDoc);
+        super(db,user);
+        this.collection = this.db.use(map.inventory.TransferOutDoc);
         var StorageManager = require('../master/storage-manager');
         this.storageManager = new StorageManager(db, user);
 
@@ -36,131 +35,29 @@ module.exports = class TokoKirimBarangReturnManager {
 
         var SPKBarangManager = require('../merchandiser/efr-pk-manager');
         this.spkBarangManager = new SPKBarangManager(db, user);
-    }
+    } 
+    
+    _getQuery(paging) {
+        var deletedFilter = {
+            _deleted: false
+        }, keywordFilter = {};
 
-    read(paging) {
-        var _paging = Object.assign({
-            page: 1,
-            size: 20,
-            order: '_id',
-            asc: true
-        }, paging);
+        var query = {};
+        if (paging.keyword) {
+            var regex = new RegExp(paging.keyword, "i");
 
-        return new Promise((resolve, reject) => {
-            var regexModuleId = new RegExp(moduleId, "i");
-            var filter = {
-                _deleted: false,
+            var filterCode = {
                 'code': {
-                    '$regex': regexModuleId
+                    '$regex': regex
                 }
             };
-            var query = _paging.keyword ? {
-                '$and': [filter]
-            } : filter;
-
-            if (_paging.keyword) {
-                var regex = new RegExp(_paging.keyword, "i");
-                var filterCode = {
-                    'code': {
-                        '$regex': regex
-                    }
-                };
-                var $or = {
-                    '$or': [filterCode]
-                };
-
-                query['$and'].push($or);
-            }
-
-
-            this.transferOutDocCollection
-                .where(query)
-                .page(_paging.page, _paging.size)
-                .orderBy(_paging.order, _paging.asc)
-                .execute()
-                .then(transferOutDocs => {
-                    resolve(transferOutDocs);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-    getSingleById(id) {
-        return new Promise((resolve, reject) => {
-            var query = {
-                _id: new ObjectId(id),
-                _deleted: false
+            keywordFilter = {
+                '$or': [filterCode]
             };
-            this.getSingleByQuery(query)
-                .then(transferOutDoc => {
-                    resolve(transferOutDoc);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-    getSingleByIdOrDefault(id) {
-        return new Promise((resolve, reject) => {
-            var query = {
-                _id: new ObjectId(id),
-                _deleted: false
-            };
-            this.getSingleByQueryOrDefault(query)
-                .then(transferOutDoc => {
-                    resolve(transferOutDoc);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-
-    getByCodeOrDefault(code) {
-        return new Promise((resolve, reject) => {
-            var query = {
-                code: code,
-                _deleted: false
-            };
-            this.getSingleByQueryOrDefault(query)
-                .then(transferOutDoc => {
-                    resolve(transferOutDoc);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
-    }
-
-    getSingleByQuery(query) {
-        return new Promise((resolve, reject) => {
-            this.transferOutDocCollection
-                .single(query)
-                .then(transferOutDoc => {
-                    resolve(transferOutDoc);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        })
-    }
-
-    getSingleByQueryOrDefault(query) {
-        return new Promise((resolve, reject) => {
-            this.transferOutDocCollection
-                .singleOrDefault(query)
-                .then(transferOutDoc => {
-                    resolve(transferOutDoc);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        })
-    }
+        }
+        query = { '$and': [deletedFilter, paging.filter, keywordFilter] }
+        return query;
+    } 
 
     create(transferOutDoc) {
         return new Promise((resolve, reject) => {
@@ -219,7 +116,7 @@ module.exports = class TokoKirimBarangReturnManager {
         });
     }
 
-    _validate(transferOutDoc) {
+   _validate(transferOutDoc) {
         var errors = {};
         return new Promise((resolve, reject) => {
             var valid = transferOutDoc;
@@ -228,7 +125,7 @@ module.exports = class TokoKirimBarangReturnManager {
                 .then(module => {
                     var config = module.config;
                     if (!valid.sourceId || valid.sourceId == '')
-                        errors["sourceId"] = "sourceId is required"; 
+                        errors["sourceId"] = "sourceId is required";
 
                     if (!valid.destinationId || valid.destinationId == '')
                         errors["destinationId"] = "destinationId is required";
@@ -271,8 +168,6 @@ module.exports = class TokoKirimBarangReturnManager {
                     Promise.all([getSpk].concat(getItem))
                         .then(results => {
                             var index = 0;
-                            var itemErrors = [];
-                            var itemError = {};
                             var inventoryQuantity = 0;
 
                             var dataSpk = results[0];
@@ -281,7 +176,9 @@ module.exports = class TokoKirimBarangReturnManager {
                             }
                             var items = results.slice(1, results.length)
                             if (items.length > 0) {
+                                var itemErrors = [];
                                 for (var item of valid.items) {
+                                    var itemError = {};
                                     if (items[index] == null) {
                                         inventoryQuantity = 0;
                                     } else {

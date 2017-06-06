@@ -1,10 +1,10 @@
 var helper = require("../../helper");
 var SqlHelper = require("../../sql-helper")
-var Manager = require("../../../src/etl/fact-penjualan");
+var Manager = require("../../../src/etl/dim-branch");
 var instanceManager = null;
 var should = require("should");
 
-before("#00. connect db", function (done) {
+before("#00. connect db", function(done) {
     var mongoDbConnection = helper.getDb();
     var sql = new SqlHelper();
     var sqlConnection = sql.startConnection();
@@ -27,7 +27,7 @@ before("#00. connect db", function (done) {
         });
 });
 
-it("#01. should success when run etl for fact penjualan", function (done) {
+it("#01. should success when run etl for dim branch", function(done) {
     instanceManager.run()
         .then(() => {
             done();
